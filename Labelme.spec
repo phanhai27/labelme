@@ -35,7 +35,7 @@ hiddenimports = [
 ]
 
 a = Analysis(
-    ["labelme/__main__.py"],
+    ["tools/installer/run_labelme.py"],
     pathex=[],
     binaries=[],
     datas=datas,

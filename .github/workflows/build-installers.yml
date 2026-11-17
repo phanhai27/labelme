@@ -44,6 +44,18 @@ jobs:
         shell: pwsh
         run: uv run pyinstaller Labelme.spec --noconfirm
 
+      - name: Smoke test frozen executable
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath ".\dist\Labelme\Labelme.exe" -ArgumentList "--version" -PassThru -NoNewWindow
+          if (-not $p.WaitForExit(30000)) {
+            $p.Kill()
+            throw "Labelme.exe --version timed out (possible error dialog)"
+          }
+          if ($p.ExitCode -ne 0) {
+            throw "Labelme.exe exited with code $($p.ExitCode)"
+          }
+
       - name: Build Windows Installer with Inno Setup
         shell: pwsh
         run: |
@@ -94,6 +106,9 @@ jobs:
         run: |
           bash tools/installer/build_mac_dmg.sh --icon-only
           uv run pyinstaller Labelme.spec --noconfirm
+
+      - name: Smoke test frozen app
+        run: ./dist/Labelme.app/Contents/MacOS/Labelme --version
 
       - name: Package .dmg installer
         run: bash tools/installer/build_mac_dmg.sh
