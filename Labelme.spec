@@ -3,7 +3,7 @@ import importlib.metadata
 import os
 import sys
 
-from PyInstaller.utils.hooks import collect_data_files, copy_metadata
+from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 block_cipher = None
 
@@ -12,13 +12,15 @@ try:
 except importlib.metadata.PackageNotFoundError:
     app_version = "0.0.0"
 
+osam_datas, osam_binaries, osam_hiddenimports = collect_all("osam")
+
 datas = [
     ("labelme/_config/default_config.yaml", "labelme/_config"),
     ("labelme/icons", "labelme/icons"),
     ("labelme/translate", "labelme/translate"),
 ]
-datas += collect_data_files("osam")
-datas += copy_metadata("labelme")
+datas += osam_datas
+datas += copy_metadata("labelme", recursive=True)
 
 hiddenimports = [
     "PySide6",
@@ -32,12 +34,12 @@ hiddenimports = [
     "imgviz",
     "PIL",
     "ruamel.yaml",
-]
+] + osam_hiddenimports
 
 a = Analysis(
     ["tools/installer/run_labelme.py"],
     pathex=[],
-    binaries=[],
+    binaries=osam_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -48,6 +50,10 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
+    module_collection_mode={
+        "labelme": "pyz+py",
+        "osam": "pyz+py",
+    },
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
