@@ -623,16 +623,23 @@ def _make_wheel_event(
         pytest.param(
             Qt.KeyboardModifier.NoModifier,
             QPoint(0, 120),
-            "scroll_request",
-            Qt.Orientation.Vertical,
-            id="plain_scroll",
+            "zoom_request",
+            None,
+            id="plain_zoom",
         ),
         pytest.param(
             Qt.KeyboardModifier.ShiftModifier,
             QPoint(0, 120),
+            "slice_scroll_request",
+            None,
+            id="shift_slice_scroll",
+        ),
+        pytest.param(
+            Qt.KeyboardModifier.AltModifier,
+            QPoint(0, 120),
             "scroll_request",
-            Qt.Orientation.Horizontal,
-            id="shift_horizontal_scroll",
+            Qt.Orientation.Vertical,
+            id="alt_scroll",
         ),
     ],
 )

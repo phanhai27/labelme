@@ -290,6 +290,7 @@ _CREATE_MODE_TO_SHAPE_TYPE: Final[dict[_CreateMode, ShapeType]] = {
 class _CanvasMode(enum.Enum):
     CREATE = enum.auto()
     EDIT = enum.auto()
+    PAN = enum.auto()
 
 
 class Canvas(QtWidgets.QWidget):
@@ -345,7 +346,9 @@ class Canvas(QtWidgets.QWidget):
 
     zoom_request = QtCore.Signal(int, QPointF)
     scroll_request = QtCore.Signal(int, Qt.Orientation)
+    slice_scroll_request = QtCore.Signal(int)
     pan_request = QtCore.Signal(QPoint)
+    window_level_drag_request = QtCore.Signal(float, float)
     new_shape = QtCore.Signal()
     inference_produced_no_shapes = QtCore.Signal()
     inference_failed = QtCore.Signal(str)
@@ -387,6 +390,11 @@ class Canvas(QtWidgets.QWidget):
     _rotation_stays_in_image: bool
 
     _pan_anchor: QPointF | None
+    _is_space_pressed: bool = False
+    _is_dicom_active: bool = False
+    _wl_drag_press_pos: QPointF | None = None
+    _wl_drag_last_pos: QPointF | None = None
+    _is_wl_dragging: bool = False
 
     _highlight: VertexHighlight | None
     _rotation_highlight: VertexHighlight | None
@@ -489,6 +497,11 @@ class Canvas(QtWidgets.QWidget):
         self._painter = QtGui.QPainter()
         self._dirty_rect = QtCore.QRect()
         self._pan_anchor = None
+        self._is_space_pressed = False
+        self._is_dicom_active = False
+        self._wl_drag_press_pos = None
+        self._wl_drag_last_pos = None
+        self._is_wl_dragging = False
         self._color_resolver: Callable[[str], tuple[int, int, int]] | None = None
         self._point_size: int = 8
         self._point_type: Literal["square", "round"] = "round"
@@ -500,6 +513,13 @@ class Canvas(QtWidgets.QWidget):
         self._right_click_shape = None
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.WheelFocus)
+
+    def set_dicom_active(self, *, active: bool) -> None:
+        self._is_dicom_active = active
+        if not active:
+            self._wl_drag_press_pos = None
+            self._wl_drag_last_pos = None
+            self._is_wl_dragging = False
 
     def set_fill_drawing(self, *, value: bool) -> None:
         self._fill_drawing = value
@@ -517,14 +537,16 @@ class Canvas(QtWidgets.QWidget):
             return
         target = self._view_offset + step
         if constrain_to_center:
-            # A focal zoom can leave the image away from the center. Manual
-            # panning may bring it back but must not move it farther away.
+            # Allow over-panning up to 50% of the viewport so peripheral
+            # anatomical lesions at image edges can be centered on screen.
             x_limit = max(
-                min(self.pixmap.width() * self.scale, viewport.width()) / 2,
+                viewport.width() / 2.0,
+                (self.pixmap.width() * self.scale) / 2.0,
                 abs(self._view_offset.x()),
             )
             y_limit = max(
-                min(self.pixmap.height() * self.scale, viewport.height()) / 2,
+                viewport.height() / 2.0,
+                (self.pixmap.height() * self.scale) / 2.0,
                 abs(self._view_offset.y()),
             )
             target = QPointF(
@@ -1117,7 +1139,10 @@ class Canvas(QtWidgets.QWidget):
 
     @override
     def enterEvent(self, _a0: QtCore.QEvent, /) -> None:
-        self._apply_cursor(role=self._cursor)
+        if self.mode == _CanvasMode.PAN or self._is_space_pressed:
+            self._apply_cursor(role=CursorRole.GRAB)
+        else:
+            self._apply_cursor(role=self._cursor)
         self._update_status(extra_messages=None)
 
     @override
@@ -1128,6 +1153,11 @@ class Canvas(QtWidgets.QWidget):
 
     @override
     def focusOutEvent(self, _a0: QtGui.QFocusEvent, /) -> None:
+        self._is_space_pressed = False
+        self._pan_anchor = None
+        self._wl_drag_press_pos = None
+        self._wl_drag_last_pos = None
+        self._is_wl_dragging = False
         self._drag_anchor = None
         self._release_cursor()
         self._update_status(extra_messages=None)
@@ -1138,6 +1168,7 @@ class Canvas(QtWidgets.QWidget):
         if create_mode is not None:
             self._set_create_mode(value=create_mode)
         new_mode = _CanvasMode.EDIT if value else _CanvasMode.CREATE
+        was_pan = self.mode == _CanvasMode.PAN
         # Any tool pick re-arms it, so re-clicking the active tool shows it again.
         self._ai_prompt_hint_due = not value
         self.update()  # Also clears the crosshair on leaving CREATE.
@@ -1148,6 +1179,19 @@ class Canvas(QtWidgets.QWidget):
         if self.mode == _CanvasMode.CREATE:
             self._set_highlight(hover=_Hover())
             self.deselect_shape()
+        if was_pan and not self._is_space_pressed:
+            self._release_cursor()
+        self._update_status(extra_messages=None)
+
+    def set_panning(self) -> None:
+        self._ai_prompt_hint_due = False
+        self.update()
+        if self.mode is not _CanvasMode.PAN:
+            self._clear_ai_existing_shape_highlights()
+            self._clear_ai_find_all_draft()
+        self.mode = _CanvasMode.PAN
+        self._set_highlight(hover=_Hover())
+        self._apply_cursor(role=CursorRole.GRAB)
         self._update_status(extra_messages=None)
 
     def _set_highlight(self, *, hover: _Hover) -> None:
@@ -1176,7 +1220,9 @@ class Canvas(QtWidgets.QWidget):
             if self._current is not None:
                 messages.append(self.tr("ESC to cancel"))
             if self._can_close_shape():
-                messages.append(self.tr("Enter or Space to finalize"))
+                messages.append(self.tr("Enter to finalize"))
+        elif self.mode == _CanvasMode.PAN:
+            messages.append(self.tr("Panning view"))
         else:
             assert self.mode == _CanvasMode.EDIT
             messages.append(self.tr("Editing shapes"))
@@ -1293,13 +1339,32 @@ class Canvas(QtWidgets.QWidget):
         if self._pan_anchor is not None:
             self._advance_pan(event=event)
             return
-        if self.mode == _CanvasMode.CREATE:
-            self._track_drawing_cursor(pos=pos, event=event)
-            return
         buttons = event.buttons()
         if buttons & Qt.MouseButton.RightButton:
-            # Freeze the hover state while the right button is down so the
-            # context menu opened on release targets the pressed shape.
+            if self._is_dicom_active and self._wl_drag_press_pos is not None:
+                if (
+                    not self._is_wl_dragging
+                    and (event.position() - self._wl_drag_press_pos).manhattanLength()
+                    >= QtWidgets.QApplication.startDragDistance()
+                ):
+                    self._is_wl_dragging = True
+                if self._is_wl_dragging and self._wl_drag_last_pos is not None:
+                    dx = event.position().x() - self._wl_drag_last_pos.x()
+                    dy = event.position().y() - self._wl_drag_last_pos.y()
+                    self._wl_drag_last_pos = QPointF(event.position())
+                    self.window_level_drag_request.emit(
+                        float(-dy * 2.0), float(dx * 4.0)
+                    )
+                return
+            if self.mode != _CanvasMode.CREATE:
+                # Freeze the hover state while the right button is down so the
+                # context menu opened on release targets the pressed shape.
+                return
+        if self.mode == _CanvasMode.PAN or self._is_space_pressed:
+            self._apply_cursor(role=CursorRole.GRAB)
+            return
+        if self.mode == _CanvasMode.CREATE:
+            self._track_drawing_cursor(pos=pos, event=event)
             return
         if buttons & Qt.MouseButton.LeftButton:
             self._continue_left_button_drag(pos=pos, event=event)
@@ -1733,7 +1798,11 @@ class Canvas(QtWidgets.QWidget):
         self, *, pos: QPointF, event: QtGui.QMouseEvent
     ) -> None:
         self._clear_ai_existing_shape_highlights()
-        if self.mode == _CanvasMode.EDIT and event.buttons() == event.button():
+        if (
+            self.mode == _CanvasMode.EDIT
+            and not self._is_space_pressed
+            and event.buttons() == event.button()
+        ):
             # The view can change under a still pointer (keyboard zoom), leaving
             # the hover from the last move on a shape the press is not over. A
             # press joining a held button keeps that gesture's target.
@@ -1741,14 +1810,21 @@ class Canvas(QtWidgets.QWidget):
             self._refresh_hover_state(pos=pos)
         button = event.button()
         if button == Qt.MouseButton.LeftButton:
+            if self.mode == _CanvasMode.PAN or self._is_space_pressed:
+                if not self.pixmap.isNull():
+                    self._begin_pan(event=event)
+                return
             self._press_left(pos=pos, event=event)
             return
-        if button == Qt.MouseButton.RightButton and self.mode == _CanvasMode.EDIT:
-            self._press_right(pos=pos, event=event)
+        if button == Qt.MouseButton.RightButton:
+            if self._is_dicom_active:
+                self._wl_drag_press_pos = QPointF(event.position())
+                self._wl_drag_last_pos = QPointF(event.position())
+                self._is_wl_dragging = False
+            if self.mode == _CanvasMode.EDIT:
+                self._press_right(pos=pos, event=event)
             return
-        if button == Qt.MouseButton.MiddleButton and (
-            self._is_image_overflowing_viewport() or not self._view_offset.isNull()
-        ):
+        if button == Qt.MouseButton.MiddleButton and not self.pixmap.isNull():
             self._begin_pan(event=event)
 
     def _press_left(self, *, pos: QPointF, event: QtGui.QMouseEvent) -> None:
@@ -2003,7 +2079,7 @@ class Canvas(QtWidgets.QWidget):
         self._prev_point = pos
 
     def _begin_pan(self, *, event: QtGui.QMouseEvent) -> None:
-        self._apply_cursor(role=CursorRole.GRAB)
+        self._apply_cursor(role=CursorRole.MOVE)
         self._pan_anchor = QPointF(self.mapToGlobal(event.position().toPoint()))
 
     @override
@@ -2011,7 +2087,11 @@ class Canvas(QtWidgets.QWidget):
         self._is_pointer_held = a0.buttons() != Qt.MouseButton.NoButton
         if self.is_ai_finalizing:
             return
-        if a0.button() == Qt.MouseButton.LeftButton and self._stroke_press is not None:
+        if (
+            a0.button() == Qt.MouseButton.LeftButton
+            and self._stroke_press is not None
+            and self._pan_anchor is None
+        ):
             if self.mode == _CanvasMode.CREATE and self._current is not None:
                 pos = self._stroke_sample(
                     pos=self.transform_widget_point_to_image(point=a0.position())
@@ -2074,6 +2154,13 @@ class Canvas(QtWidgets.QWidget):
             self._release_right(event=event)
             return
         if button == Qt.MouseButton.LeftButton:
+            if (
+                self._pan_anchor is not None
+                or self.mode == _CanvasMode.PAN
+                or self._is_space_pressed
+            ):
+                self._finish_pan()
+                return
             if self.mode == _CanvasMode.CREATE:
                 if self.create_mode == "ai_segment":
                     self._release_ai_segment(event=event)
@@ -2085,6 +2172,19 @@ class Canvas(QtWidgets.QWidget):
             self._finish_pan()
 
     def _release_right(self, *, event: QtGui.QMouseEvent) -> None:
+        was_wl_dragging = self._is_wl_dragging
+        self._is_wl_dragging = False
+        self._wl_drag_press_pos = None
+        self._wl_drag_last_pos = None
+        if was_wl_dragging:
+            self._right_click_shape = None
+            if self.mode == _CanvasMode.PAN or self._is_space_pressed:
+                self._apply_cursor(role=CursorRole.GRAB)
+            elif self.mode == _CanvasMode.CREATE:
+                self._apply_cursor(role=CursorRole.DRAW)
+            else:
+                self._release_cursor()
+            return
         self._release_cursor()
         self.context_menu_origin = self.mapToGlobal(event.position().toPoint())
         # An empty press is a canvas gesture even if it ends over a shape.
@@ -2117,7 +2217,12 @@ class Canvas(QtWidgets.QWidget):
         # Reset state and cursor unconditionally so a stray middle-button
         # release can never leave a grab cursor stuck on screen.
         self._pan_anchor = None
-        self._release_cursor()
+        if self.mode == _CanvasMode.PAN or self._is_space_pressed:
+            self._apply_cursor(role=CursorRole.GRAB)
+        elif self.mode == _CanvasMode.CREATE:
+            self._apply_cursor(role=CursorRole.DRAW)
+        else:
+            self._release_cursor()
 
     def _is_image_overflowing_viewport(self) -> bool:
         if self.pixmap.isNull():
@@ -3152,18 +3257,19 @@ class Canvas(QtWidgets.QWidget):
         if delta.isNull():
             a0.accept()
             return
-        if mods == Qt.KeyboardModifier.ControlModifier:
-            # with Ctrl/Command key
-            # zoom
+        if mods in (
+            Qt.KeyboardModifier.NoModifier,
+            Qt.KeyboardModifier.ControlModifier,
+        ):
+            # Focal zoom directly on plain wheel or Ctrl/Command + wheel
             if delta.y() != 0:
                 self.zoom_request.emit(delta.y(), a0.position())
-        elif mods == Qt.KeyboardModifier.ShiftModifier and delta.x() == 0:
-            # Shift+wheel scrolls horizontally. macOS swaps the axis for us,
-            # but Linux/Windows deliver the delta on y and expect the app to
-            # remap it.
-            self.scroll_request.emit(delta.y(), Qt.Orientation.Horizontal)
+        elif mods == Qt.KeyboardModifier.ShiftModifier:
+            scroll_delta = delta.y() if delta.y() != 0 else delta.x()
+            if not self.is_interacting and scroll_delta != 0:
+                self.slice_scroll_request.emit(scroll_delta)
         else:
-            # scroll
+            # Alt + wheel (or other modifiers) scrolls scrollbars
             self.scroll_request.emit(delta.x(), Qt.Orientation.Horizontal)
             self.scroll_request.emit(delta.y(), Qt.Orientation.Vertical)
         a0.accept()
@@ -3185,6 +3291,12 @@ class Canvas(QtWidgets.QWidget):
         self._clear_ai_existing_shape_highlights()
         modifiers = a0.modifiers()
         key = a0.key()
+        if key == Qt.Key.Key_Space:
+            if not a0.isAutoRepeat():
+                self._is_space_pressed = True
+                self._apply_cursor(role=CursorRole.GRAB)
+                self._update_status(extra_messages=None)
+            return
         if self.mode == _CanvasMode.CREATE:
             if key == Qt.Key.Key_Escape and (
                 self._current is not None or self._ai_segment_press is not None
@@ -3201,7 +3313,7 @@ class Canvas(QtWidgets.QWidget):
             ):
                 self._commit_ai_find_all_draft()
             elif (
-                key in (Qt.Key.Key_Return, Qt.Key.Key_Space) and self._can_close_shape()
+                key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self._can_close_shape()
             ):
                 finalized = self._stroke_press is not None and self._end_held_stroke()
                 # A cancelled label dialog restores the draft it finalized.
@@ -3221,6 +3333,19 @@ class Canvas(QtWidgets.QWidget):
 
     @override
     def keyReleaseEvent(self, a0: QtGui.QKeyEvent, /) -> None:
+        if a0.key() == Qt.Key.Key_Space:
+            if not a0.isAutoRepeat():
+                self._is_space_pressed = False
+                if self._pan_anchor is not None:
+                    self._finish_pan()
+                elif self.mode == _CanvasMode.PAN:
+                    self._apply_cursor(role=CursorRole.GRAB)
+                elif self.mode == _CanvasMode.CREATE:
+                    self._apply_cursor(role=CursorRole.DRAW)
+                else:
+                    self._release_cursor()
+                self._update_status(extra_messages=None)
+            return
         modifiers = a0.modifiers()
         if self.mode == _CanvasMode.CREATE:
             if not modifiers:
@@ -3402,6 +3527,12 @@ class Canvas(QtWidgets.QWidget):
         self._ai_segment_preview_key = None
         self._ai_segment_press = None
         self._clear_ai_find_all_draft()
+        self._is_space_pressed = False
+        self._is_dicom_active = False
+        self._wl_drag_press_pos = None
+        self._wl_drag_last_pos = None
+        self._is_wl_dragging = False
+        self._pan_anchor = None
         self._release_cursor()
         self.pixmap = QtGui.QPixmap()
         self._pixmap_rgb = None

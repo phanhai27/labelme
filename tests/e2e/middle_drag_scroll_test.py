@@ -66,7 +66,7 @@ def test_middle_drag_emits_pan_request_with_widget_pixel_delta(
     close_or_pause(qtbot=qtbot, widget=annotated_win, pause=pause)
 
 
-def test_middle_drag_no_pan_when_image_fits_viewport(
+def test_middle_drag_pans_even_when_image_fits_viewport(
     *,
     qtbot: QtBot,
     annotated_win: MainWindow,
@@ -83,16 +83,19 @@ def test_middle_drag_no_pan_when_image_fits_viewport(
         * 0.5
     )
 
-    start, end = _diagonal_drag_endpoints(canvas=canvas)
+    deltas: list[QPoint] = []
+    canvas.pan_request.connect(deltas.append)
 
-    with qtbot.assertNotEmitted(canvas.pan_request):
-        drag_canvas(
-            qtbot=qtbot,
-            canvas=canvas,
-            button=Qt.MouseButton.MiddleButton,
-            start=start,
-            end=end,
-        )
+    start, end = _diagonal_drag_endpoints(canvas=canvas)
+    drag_canvas(
+        qtbot=qtbot,
+        canvas=canvas,
+        button=Qt.MouseButton.MiddleButton,
+        start=start,
+        end=end,
+    )
+
+    assert deltas, "pan_request was not emitted during middle-drag"
 
     close_or_pause(qtbot=qtbot, widget=annotated_win, pause=pause)
 

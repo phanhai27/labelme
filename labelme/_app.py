@@ -25,6 +25,7 @@ from typing import override
 import natsort
 import numpy as np
 import PIL.features
+import PIL.Image
 from loguru import logger
 from PySide6 import QtCore
 from PySide6 import QtGui
@@ -213,6 +214,7 @@ class _Actions(NamedTuple):
     add_point_to_edge: QtGui.QAction
     create_mode: QtGui.QAction
     edit_mode: QtGui.QAction
+    pan_mode: QtGui.QAction
     create_rectangle_mode: QtGui.QAction
     create_point_mode: QtGui.QAction
     create_ai_segment_mode: QtGui.QAction
@@ -823,6 +825,16 @@ class MainWindow(QtWidgets.QMainWindow):
             tip=self.tr("Move and edit the selected shapes"),
             checked=True,
         )
+        pan_mode = mode_action(
+            text=self.tr("&Pan"),
+            toolbar_text=self.tr("Pan", "toolbar"),
+            slot=lambda: self._switch_canvas_mode(
+                edit=False, pan=True, create_mode=None
+            ),
+            shortcut=shortcuts["pan_mode"],
+            icon="phosphor/hand.svg",
+            tip=self.tr("Pan around the image"),
+        )
         create_rectangle_mode = mode_action(
             text=self.tr("Rectangle"),
             slot=lambda: self._switch_canvas_mode(edit=False, create_mode="rectangle"),
@@ -1122,6 +1134,7 @@ class MainWindow(QtWidgets.QMainWindow):
         canvas_context_menu = (
             *[draw_action for _, draw_action in draw],
             edit_mode,
+            pan_mode,
             separator(),
             *history,
             separator(),
@@ -1169,6 +1182,7 @@ class MainWindow(QtWidgets.QMainWindow):
             add_point_to_edge=add_point_to_edge,
             create_mode=create_mode,
             edit_mode=edit_mode,
+            pan_mode=pan_mode,
             create_rectangle_mode=create_rectangle_mode,
             create_point_mode=create_point_mode,
             create_ai_segment_mode=create_ai_segment_mode,
@@ -1378,6 +1392,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 overflow_label=self.tr("More shape tools"),
                 actions=[
                     self._actions.edit_mode,
+                    self._actions.pan_mode,
                     separator(),
                     *[
                         a
@@ -1552,7 +1567,9 @@ class MainWindow(QtWidgets.QMainWindow):
             Qt.Orientation.Horizontal: scroll_area.horizontalScrollBar(),
         }
         canvas.scroll_request.connect(self._on_scroll_request)
+        canvas.slice_scroll_request.connect(self._on_slice_scroll_request)
         canvas.pan_request.connect(self._on_pan_request)
+        canvas.window_level_drag_request.connect(self._on_window_level_drag_requested)
 
         canvas.new_shape.connect(self._on_new_shape)
         canvas.ai_find_all_draft_committed.connect(self._on_ai_find_all_draft_committed)
@@ -1793,6 +1810,7 @@ class MainWindow(QtWidgets.QMainWindow):
         actions = (
             *[draw_action for _, draw_action in self._actions.draw],
             self._actions.edit_mode,
+            self._actions.pan_mode,
             *self._actions.edit_menu,
         )
         self._menus.edit.addActions(actions)
@@ -2241,6 +2259,7 @@ class MainWindow(QtWidgets.QMainWindow):
         busy = canvas.is_busy
         selected = canvas.selected_shapes
         self._actions.edit_mode.setEnabled(not busy)
+        self._actions.pan_mode.setEnabled(not busy)
         self._actions.undo_last_point.setEnabled(canvas.is_drawing)
         self._actions.undo.setEnabled(not busy and canvas.can_restore_shape)
         # Locked shapes stay selectable, but only unlocked ones can be deleted.
@@ -2324,13 +2343,23 @@ class MainWindow(QtWidgets.QMainWindow):
             case "locked":
                 return self.tr("Unlock the selected shapes to convert them")
 
-    def _switch_canvas_mode(self, *, edit: bool, create_mode: str | None) -> None:
-        self._canvas_widgets.canvas.set_editing(value=edit, create_mode=create_mode)
+    def _switch_canvas_mode(
+        self,
+        *,
+        edit: bool,
+        create_mode: str | None,
+        pan: bool = False,
+    ) -> None:
+        if pan:
+            self._canvas_widgets.canvas.set_panning()
+        else:
+            self._canvas_widgets.canvas.set_editing(value=edit, create_mode=create_mode)
         # Triggering a checkable action toggles it, so re-clicking the active
         # tool unchecks it until this re-checks it.
         for draw_mode, draw_action in self._actions.draw:
-            draw_action.setChecked(not edit and create_mode == draw_mode)
-        self._actions.edit_mode.setChecked(edit)
+            draw_action.setChecked(not edit and not pan and create_mode == draw_mode)
+        self._actions.edit_mode.setChecked(edit and not pan)
+        self._actions.pan_mode.setChecked(pan)
         self._sync_edit_actions()
         self._on_ai_activity_changed()
         self._refresh_text_model_choices()
@@ -3076,6 +3105,12 @@ class MainWindow(QtWidgets.QMainWindow):
         value = bar.value() + bar.singleStep() * units
         self.set_scroll_value(orientation=orientation, value=value)
 
+    def _on_slice_scroll_request(self, delta: int, /) -> None:
+        if delta > 0:
+            self._open_prev_image()
+        elif delta < 0:
+            self._open_next_image()
+
     def _on_pan_request(self, step: QtCore.QPoint, /) -> None:
         # Pan moves the viewport opposite to the cursor delta so the image
         # tracks the grabbed point one-for-one in widget pixels.
@@ -3242,6 +3277,121 @@ class MainWindow(QtWidgets.QMainWindow):
                 is_inverted,
                 preset_name,
             )
+
+    def _apply_dicom_window_state(
+        self,
+        *,
+        window_center: float,
+        window_width: float,
+        is_inverted: bool,
+        preset_name: str,
+    ) -> None:
+        if self._dicom_session is None:
+            return
+        MIN_HU_BOUND: Final[float] = -2048.0
+        MAX_HU_BOUND: Final[float] = 4096.0
+        MAX_WW_BOUND: Final[float] = 6000.0
+
+        hu_array = self._dicom_session.hu_array
+        finite = hu_array[np.isfinite(hu_array)]
+        hu_min = float(finite.min()) if finite.size > 0 else MIN_HU_BOUND
+        hu_max = float(finite.max()) if finite.size > 0 else MAX_HU_BOUND
+        wc_min = min(hu_min, MIN_HU_BOUND)
+        wc_max = max(hu_max, MAX_HU_BOUND)
+        ww_max = max(hu_max - hu_min, MAX_WW_BOUND)
+
+        clamped_wc = min(max(float(window_center), wc_min), wc_max)
+        clamped_ww = min(max(float(window_width), 1.0), ww_max)
+
+        NDIM_GRAYSCALE: Final[int] = 2
+        self._on_dicom_window_changed(clamped_wc, clamped_ww, is_inverted, preset_name)
+        arr_u8 = self._dicom_session.render_uint8()
+        img = (
+            PIL.Image.fromarray(arr_u8, mode="L").convert("RGB")
+            if arr_u8.ndim == NDIM_GRAYSCALE
+            else PIL.Image.fromarray(arr_u8, mode="RGB")
+        )
+        qimage = QtGui.QImage(
+            img.tobytes(),
+            img.width,
+            img.height,
+            img.width * 3,
+            QtGui.QImage.Format.Format_RGB888,
+        ).copy()
+        self._on_brightness_contrast_changed(qimage)
+        preset_label = _dicom.DICOM_PRESET_LABELS.get(preset_name, preset_name)
+        inv_suffix = " [Inverted]" if is_inverted else ""
+        status_msg = (
+            f"DICOM {preset_label} — "
+            f"WL: {clamped_wc:.0f}, WW: {clamped_ww:.0f}{inv_suffix}"
+        )
+        self.show_status_message(message=status_msg, delay=2000)
+
+    def _on_window_level_drag_requested(
+        self, delta_wc: float, delta_ww: float, /
+    ) -> None:
+        if self._dicom_session is None:
+            return
+        self._apply_dicom_window_state(
+            window_center=self._dicom_session.window_center + delta_wc,
+            window_width=self._dicom_session.window_width + delta_ww,
+            is_inverted=self._dicom_session.is_inverted,
+            preset_name="custom",
+        )
+
+    def _handle_dicom_shortcut_key(self, *, event: QtGui.QKeyEvent) -> bool:
+        if self._dicom_session is None or self._image_path is None:
+            return False
+        focus_widget = QtWidgets.QApplication.focusWidget() or self.focusWidget()
+        if isinstance(
+            focus_widget,
+            QtWidgets.QLineEdit
+            | QtWidgets.QTextEdit
+            | QtWidgets.QPlainTextEdit
+            | QtWidgets.QAbstractSpinBox,
+        ):
+            return False
+
+        DICOM_PRESET_SHORTCUT_KEYS: Final[dict[int, str]] = {
+            int(Qt.Key.Key_1): "auto",
+            int(Qt.Key.Key_2): "ct_brain",
+            int(Qt.Key.Key_3): "ct_lung",
+            int(Qt.Key.Key_4): "ct_soft_tissue",
+            int(Qt.Key.Key_5): "ct_liver",
+            int(Qt.Key.Key_6): "ct_bone",
+            int(Qt.Key.Key_7): "ct_stroke",
+        }
+        mods = event.modifiers() & ~Qt.KeyboardModifier.KeypadModifier
+        key = int(event.key())
+        if key in DICOM_PRESET_SHORTCUT_KEYS and mods == Qt.KeyboardModifier.NoModifier:
+            preset_name = DICOM_PRESET_SHORTCUT_KEYS[key]
+            if preset_name == "auto":
+                wc, ww = self._dicom_session.default_auto_window()
+            else:
+                pair = _dicom.DICOM_WINDOW_PRESETS[preset_name]
+                assert pair is not None
+                wc, ww = pair
+            self._apply_dicom_window_state(
+                window_center=wc,
+                window_width=ww,
+                is_inverted=self._dicom_session.is_inverted,
+                preset_name=preset_name,
+            )
+            event.accept()
+            return True
+        if key == int(Qt.Key.Key_I) and mods in (
+            Qt.KeyboardModifier.NoModifier,
+            Qt.KeyboardModifier.ShiftModifier,
+        ):
+            self._apply_dicom_window_state(
+                window_center=self._dicom_session.window_center,
+                window_width=self._dicom_session.window_width,
+                is_inverted=not self._dicom_session.is_inverted,
+                preset_name=self._dicom_session.preset_name,
+            )
+            event.accept()
+            return True
+        return False
 
     def create_brightness_contrast_dialog(self) -> BrightnessContrastDialog:
         assert self._annotation is not None
@@ -3732,6 +3882,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._canvas_widgets.canvas.setEnabled(False)
         self._annotation = annotation
         self._dicom_session = dicom_session
+        self._canvas_widgets.canvas.set_dicom_active(active=dicom_session is not None)
         self._image_path = image_path
         self._file_list_image_path = file_list_image_path
         self._label_file_path = label_file_path
@@ -3817,8 +3968,20 @@ class MainWindow(QtWidgets.QMainWindow):
         return True
 
     @override
+    def keyPressEvent(self, a0: QtGui.QKeyEvent, /) -> None:
+        if self._handle_dicom_shortcut_key(event=a0):
+            return
+        super().keyPressEvent(a0)
+
+    @override
     def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent, /) -> bool:
         if watched is self._canvas_widgets.canvas:
+            if (
+                event.type() == QtCore.QEvent.Type.KeyPress
+                and isinstance(event, QtGui.QKeyEvent)
+                and self._handle_dicom_shortcut_key(event=event)
+            ):
+                return True
             if event.type() in (
                 QtCore.QEvent.Type.MouseButtonPress,
                 QtCore.QEvent.Type.MouseButtonDblClick,

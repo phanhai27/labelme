@@ -13,17 +13,25 @@ from pydicom.dataset import FileMetaDataset
 from pydicom.uid import UID
 from pydicom.uid import ExplicitVRLittleEndian
 from pydicom.uid import generate_uid
+from PySide6 import QtCore
+from PySide6 import QtGui
+from PySide6.QtCore import QPoint
 from PySide6.QtCore import QPointF
 from PySide6.QtCore import QSettings
+from PySide6.QtCore import Qt
 from pytestqt.qtbot import QtBot
 
 from labelme import _app
 from labelme import _dicom
 from labelme._app import MainWindow
+from labelme._app import _ZoomMode
 from labelme._label_file import ImageDecodeLimitError
 from labelme._label_file import read_image_file
 from labelme._shape import Shape
 from labelme._utils._image import img_qt_to_arr
+from labelme._widgets import LabelDialogEntry
+from labelme._widgets._canvas import _CanvasMode
+from labelme._widgets._canvas_interaction import CursorRole
 
 
 @pytest.fixture(autouse=True)
@@ -402,4 +410,291 @@ def test_tc_dcm_10_keep_prev_window_level_across_dicom_series(
     assert win._dicom_session.window_center == 400.0
     assert win._dicom_session.window_width == 1800.0
     assert win._dicom_session.preset_name == "ct_bone"
+    win.close()
+
+
+def _make_wheel_event(
+    *,
+    pos: QPointF,
+    angle_delta: QPoint,
+    modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier,
+) -> QtGui.QWheelEvent:
+    return QtGui.QWheelEvent(
+        pos,
+        pos,
+        QPoint(0, 0),
+        angle_delta,
+        Qt.MouseButton.NoButton,
+        modifiers,
+        Qt.ScrollPhase.NoScrollPhase,
+        False,  # noqa: FBT003 -- QWheelEvent takes inverted positionally
+    )
+
+
+def test_tc_erg_01_direct_wheel_focal_zoom_and_shift_wheel_slice_scroll(
+    *, tmp_path: Path, qtbot: QtBot
+) -> None:
+    for idx in (1, 2, 3):
+        _create_chest_ct_dicom(
+            path=tmp_path / f"slice_0{idx}.dcm",
+            rows=512,
+            cols=512,
+            instance_number=idx,
+        )
+
+    win = _make_window(qtbot=qtbot, file_or_dir=str(tmp_path))
+    canvas = win._canvas_widgets.canvas
+    z0 = win._canvas_widgets.zoom_widget.value()
+
+    canvas.wheelEvent(
+        _make_wheel_event(
+            pos=QPointF(480.0, 480.0),
+            angle_delta=QPoint(0, 120),
+            modifiers=Qt.KeyboardModifier.NoModifier,
+        )
+    )
+    assert win._zoom_mode == _ZoomMode.MANUAL_ZOOM
+    assert win._canvas_widgets.zoom_widget.value() > z0
+
+    canvas.wheelEvent(
+        _make_wheel_event(
+            pos=QPointF(256.0, 256.0),
+            angle_delta=QPoint(0, -120),
+            modifiers=Qt.KeyboardModifier.ShiftModifier,
+        )
+    )
+    assert win._image_path is not None
+    assert Path(win._image_path).name == "slice_02.dcm"
+
+    win._switch_canvas_mode(edit=False, create_mode="polygon")
+    p1 = canvas.transform_image_point_to_widget(point=QPointF(100.0, 100.0)).toPoint()
+    p2 = canvas.transform_image_point_to_widget(point=QPointF(200.0, 100.0)).toPoint()
+    qtbot.mouseClick(canvas, Qt.MouseButton.LeftButton, pos=p1)
+    qtbot.mouseMove(canvas, pos=p2)
+    qtbot.mouseClick(canvas, Qt.MouseButton.LeftButton, pos=p2)
+    assert canvas.is_drawing is True
+    assert canvas._current is not None
+    assert len(canvas._current.points) == 2
+
+    canvas.wheelEvent(
+        _make_wheel_event(
+            pos=QPointF(256.0, 256.0),
+            angle_delta=QPoint(0, -120),
+            modifiers=Qt.KeyboardModifier.ShiftModifier,
+        )
+    )
+    assert win._image_path is not None
+    assert Path(win._image_path).name == "slice_02.dcm"
+    assert canvas._current is not None
+    assert len(canvas._current.points) == 2
+    canvas._release_cursor()
+    win.close()
+
+
+def test_tc_erg_02_pan_tool_and_overpan_50_percent_viewport(
+    *, tmp_path: Path, qtbot: QtBot
+) -> None:
+    dcm_path = _create_chest_ct_dicom(
+        path=tmp_path / "slice_01.dcm", rows=512, cols=512
+    )
+    win = _make_window(qtbot=qtbot, file_or_dir=str(dcm_path))
+    win.resize(1100, 750)
+    win._set_zoom_to_original()
+    canvas = win._canvas_widgets.canvas
+    viewport = win._canvas_widgets.scroll_area.viewport()
+    viewport.resize(800, 600)
+
+    assert win._actions.pan_mode.isEnabled() is True
+    assert win._actions.pan_mode.shortcut().toString() == "H"
+
+    win._actions.pan_mode.trigger()
+    assert canvas.mode == _CanvasMode.PAN
+    assert win._actions.pan_mode.isChecked() is True
+    assert win._actions.edit_mode.isChecked() is False
+    assert canvas._cursor == CursorRole.GRAB
+
+    edge_before = canvas.transform_image_point_to_widget(point=QPointF(0.0, 0.0))
+    start = QPoint(256, 256)
+    end = QPoint(256 + 250, 256 + 200)
+    qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=start)
+    assert canvas._cursor == CursorRole.MOVE
+    canvas.mouseMoveEvent(
+        QtGui.QMouseEvent(
+            QtCore.QEvent.Type.MouseMove,
+            QPointF(end),
+            QPointF(canvas.mapToGlobal(end)),
+            Qt.MouseButton.NoButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+    )
+    qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=end)
+
+    assert canvas.get_view_offset().x() > 0
+    assert canvas.get_view_offset().y() > 0
+    edge_after = canvas.transform_image_point_to_widget(point=QPointF(0.0, 0.0))
+    assert edge_after.x() > edge_before.x()
+    assert edge_after.y() > edge_before.y()
+    canvas._release_cursor()
+    win.close()
+
+
+def test_tc_erg_03_spring_loaded_space_pan_while_drawing_polygon(
+    *, tmp_path: Path, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dcm_path = _create_chest_ct_dicom(
+        path=tmp_path / "slice_01.dcm", rows=512, cols=512
+    )
+    win = _make_window(qtbot=qtbot, file_or_dir=str(dcm_path))
+    monkeypatch.setattr(
+        win._label_dialog,
+        "popup",
+        lambda **_kwargs: LabelDialogEntry(
+            label="lung_lesion", flags={}, group_id=None, description=""
+        ),
+    )
+    win._set_zoom_to_original()
+    canvas = win._canvas_widgets.canvas
+
+    win._switch_canvas_mode(edit=False, create_mode="polygon")
+    for pt in (QPointF(50.0, 50.0), QPointF(150.0, 50.0), QPointF(150.0, 150.0)):
+        wpt = canvas.transform_image_point_to_widget(point=pt).toPoint()
+        qtbot.mouseMove(canvas, pos=wpt)
+        qtbot.mouseClick(canvas, Qt.MouseButton.LeftButton, pos=wpt)
+
+    assert canvas.is_drawing is True
+    assert canvas._current is not None
+    assert len(canvas._current.points) == 3
+
+    qtbot.keyPress(canvas, Qt.Key.Key_Space)
+    assert canvas.is_drawing is True
+    assert len(canvas.shapes) == 0
+    assert canvas._is_space_pressed is True
+    assert canvas._cursor == CursorRole.GRAB
+
+    offset_before = canvas.get_view_offset()
+    drag_start = QPoint(100, 100)
+    drag_end = QPoint(220, 180)
+    qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=drag_start)
+    canvas.mouseMoveEvent(
+        QtGui.QMouseEvent(
+            QtCore.QEvent.Type.MouseMove,
+            QPointF(drag_end),
+            QPointF(canvas.mapToGlobal(drag_end)),
+            Qt.MouseButton.NoButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+    )
+    qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=drag_end)
+
+    assert canvas.get_view_offset() != offset_before
+    assert canvas._current is not None
+    assert len(canvas._current.points) == 3
+
+    qtbot.keyRelease(canvas, Qt.Key.Key_Space)
+    assert canvas._is_space_pressed is False
+
+    pt4 = canvas.transform_image_point_to_widget(point=QPointF(50.0, 150.0)).toPoint()
+    qtbot.mouseMove(canvas, pos=pt4)
+    qtbot.mouseClick(canvas, Qt.MouseButton.LeftButton, pos=pt4)
+    assert canvas._current is not None
+    assert len(canvas._current.points) == 4
+
+    qtbot.keyClick(canvas, Qt.Key.Key_Return)
+    assert len(canvas.shapes) == 1
+    assert len(canvas.shapes[0].points) == 4
+    canvas._release_cursor()
+    win.mark_clean()
+    win.close()
+
+
+def test_tc_erg_04_dicom_preset_shortcuts_1_to_7_and_invert(
+    *, tmp_path: Path, qtbot: QtBot
+) -> None:
+    dcm_path = _create_chest_ct_dicom(path=tmp_path / "chest_ct_slice.dcm")
+    win = _make_window(qtbot=qtbot, file_or_dir=str(dcm_path))
+    canvas = win._canvas_widgets.canvas
+    assert win._dicom_session is not None
+
+    qtbot.keyClick(win, Qt.Key.Key_6)
+    assert win._dicom_session.preset_name == "ct_bone"
+    assert win._dicom_session.window_center == 400.0
+    assert win._dicom_session.window_width == 1800.0
+    bone_arr = img_qt_to_arr(img_qt=canvas.pixmap.toImage())
+    assert bone_arr[64, 64, 0] == 0
+
+    qtbot.keyClick(win, Qt.Key.Key_3)
+    assert win._dicom_session.preset_name == "ct_lung"
+    assert win._dicom_session.window_center == -600.0
+    assert win._dicom_session.window_width == 1500.0
+    lung_arr = img_qt_to_arr(img_qt=canvas.pixmap.toImage())
+    assert lung_arr[64, 64, 0] in (127, 128)
+    assert lung_arr[90, 90, 0] == 255
+
+    qtbot.keyClick(win, Qt.Key.Key_I)
+    assert win._dicom_session.is_inverted is True
+    inv_arr = img_qt_to_arr(img_qt=canvas.pixmap.toImage())
+    assert inv_arr[90, 90, 0] == 0
+
+    win._docks.file_search.setFocus()
+    qtbot.keyClicks(win._docks.file_search, "3")
+    assert win._docks.file_search.text() == "3"
+    assert win._dicom_session.is_inverted is True
+    assert win._dicom_session.preset_name == "ct_lung"
+    win.close()
+
+
+def test_tc_erg_05_right_drag_adjusts_wl_ww_without_opening_context_menu(
+    *, tmp_path: Path, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dcm_path = _create_chest_ct_dicom(path=tmp_path / "chest_ct_slice.dcm")
+    win = _make_window(qtbot=qtbot, file_or_dir=str(dcm_path))
+    canvas = win._canvas_widgets.canvas
+    assert win._dicom_session is not None
+
+    qtbot.keyClick(win, Qt.Key.Key_4)
+    assert win._dicom_session.preset_name == "ct_soft_tissue"
+    assert win._dicom_session.window_center == 40.0
+    assert win._dicom_session.window_width == 400.0
+
+    opened_menus: list[str] = []
+    monkeypatch.setattr(
+        canvas.shape_context_menu,
+        "exec",
+        lambda *_args, **_kwargs: opened_menus.append("shape"),
+    )
+    monkeypatch.setattr(
+        canvas.canvas_context_menu,
+        "exec",
+        lambda *_args, **_kwargs: opened_menus.append("canvas"),
+    )
+
+    start = QPoint(200, 200)
+    end = QPoint(260, 150)
+    qtbot.mousePress(canvas, Qt.MouseButton.RightButton, pos=start)
+    canvas.mouseMoveEvent(
+        QtGui.QMouseEvent(
+            QtCore.QEvent.Type.MouseMove,
+            QPointF(end),
+            QPointF(canvas.mapToGlobal(end)),
+            Qt.MouseButton.NoButton,
+            Qt.MouseButton.RightButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+    )
+    qtbot.mouseRelease(canvas, Qt.MouseButton.RightButton, pos=end)
+
+    assert win._dicom_session.window_width != 400.0
+    assert win._dicom_session.window_center != 40.0
+    assert win._dicom_session.preset_name == "custom"
+    assert opened_menus == []
+
+    wc_after_drag = win._dicom_session.window_center
+    ww_after_drag = win._dicom_session.window_width
+    qtbot.mousePress(canvas, Qt.MouseButton.RightButton, pos=start)
+    qtbot.mouseRelease(canvas, Qt.MouseButton.RightButton, pos=start)
+    assert win._dicom_session.window_center == wc_after_drag
+    assert win._dicom_session.window_width == ww_after_drag
+    assert opened_menus == ["canvas"]
     win.close()

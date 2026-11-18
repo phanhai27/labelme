@@ -2108,7 +2108,7 @@ def test_click_jitter_does_not_add_vertices_but_drag_does(
     )
 
 
-@pytest.mark.parametrize("key", [Qt.Key.Key_Return, Qt.Key.Key_Space])
+@pytest.mark.parametrize("key", [Qt.Key.Key_Return, Qt.Key.Key_Enter])
 @pytest.mark.parametrize("mode", ["polygon", "linestrip"])
 def test_finishing_a_held_stroke_by_key_simplifies_it(
     *, canvas: Canvas, qtbot: QtBot, mode: str, key: Qt.Key
@@ -2127,7 +2127,7 @@ def test_finishing_a_held_stroke_by_key_simplifies_it(
     )
 
 
-@pytest.mark.parametrize("key", [Qt.Key.Key_Return, Qt.Key.Key_Space])
+@pytest.mark.parametrize("key", [Qt.Key.Key_Return, Qt.Key.Key_Enter])
 def test_cancelled_label_after_a_key_closes_a_held_stroke_prompts_once(
     *, canvas: Canvas, qtbot: QtBot, key: Qt.Key
 ) -> None:
