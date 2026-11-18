@@ -13,14 +13,18 @@ except importlib.metadata.PackageNotFoundError:
     app_version = "0.0.0"
 
 osam_datas, osam_binaries, osam_hiddenimports = collect_all("osam")
+sitk_datas, sitk_binaries, sitk_hiddenimports = collect_all("SimpleITK")
+pydicom_datas, pydicom_binaries, pydicom_hiddenimports = collect_all("pydicom")
 
 datas = [
     ("labelme/_config/default_config.yaml", "labelme/_config"),
     ("labelme/icons", "labelme/icons"),
     ("labelme/translate", "labelme/translate"),
 ]
-datas += osam_datas
+datas += osam_datas + sitk_datas + pydicom_datas
 datas += copy_metadata("labelme", recursive=True)
+datas += copy_metadata("SimpleITK")
+datas += copy_metadata("pydicom")
 
 hiddenimports = [
     "PySide6",
@@ -34,12 +38,15 @@ hiddenimports = [
     "imgviz",
     "PIL",
     "ruamel.yaml",
-] + osam_hiddenimports
+    "SimpleITK",
+    "pydicom",
+    "pydicom.pixels",
+] + osam_hiddenimports + sitk_hiddenimports + pydicom_hiddenimports
 
 a = Analysis(
     ["tools/installer/run_labelme.py"],
     pathex=[],
-    binaries=osam_binaries,
+    binaries=osam_binaries + sitk_binaries + pydicom_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
