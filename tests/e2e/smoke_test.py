@@ -44,8 +44,10 @@ def test_select_tool_heads_the_shape_tool_rail(*, main_win: MainWinFactory) -> N
     top = win.findChild(QtWidgets.QToolBar, "ToolsToolBar")
     assert rail is not None and top is not None
 
-    first, second, third = rail.actions()[:3]
+    first, second, third, fourth = rail.actions()[:4]
     assert first is win._actions.edit_mode
-    assert second.isSeparator()
-    assert third is dict(win._actions.draw)["polygon"]
+    assert second is win._actions.pan_mode
+    assert third.isSeparator()
+    assert fourth is dict(win._actions.draw)["polygon"]
     assert win._actions.edit_mode not in top.actions()
+    assert win._actions.pan_mode not in top.actions()
