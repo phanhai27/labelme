@@ -417,7 +417,7 @@ def _make_wheel_event(
     *,
     pos: QPointF,
     angle_delta: QPoint,
-    modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier,
+    modifiers: Qt.KeyboardModifier,
 ) -> QtGui.QWheelEvent:
     return QtGui.QWheelEvent(
         pos,

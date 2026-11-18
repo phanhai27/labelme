@@ -1,15 +1,11 @@
 ---
 name: Build Installers
-
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
-
+    tags: [v*]
 permissions:
   contents: write
-
 jobs:
   build-windows:
     name: Build Windows Installer (x64)
@@ -20,30 +16,25 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
         with:
           fetch-depth: 0
-
       - name: Set up uv
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: '3.12'
           enable-cache: true
-
       - name: Install dependencies and PyInstaller
         shell: pwsh
         run: |
           uv sync --no-dev
           uv pip install pyinstaller
-
       - name: Resolve Labelme version
         shell: pwsh
         run: |
           $version = (uv run python -c "import labelme; print(labelme.__version__)").Trim()
           echo "LABELME_VERSION=$version" >> $env:GITHUB_ENV
           echo "Detected version: $version"
-
       - name: Build standalone executable with PyInstaller
         shell: pwsh
         run: uv run pyinstaller Labelme.spec --noconfirm
-
       - name: Smoke test frozen executable
         shell: pwsh
         run: |
@@ -55,7 +46,6 @@ jobs:
           if ($p.ExitCode -ne 0) {
             throw "Labelme.exe exited with code $($p.ExitCode)"
           }
-
       - name: Build Windows Installer with Inno Setup
         shell: pwsh
         run: |
@@ -64,14 +54,12 @@ jobs:
             choco install innosetup -y --no-progress
           }
           & $iscc "/DAppVersion=$env:LABELME_VERSION" tools\installer\labelme_windows.iss
-
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: Labelme-Windows-Setup-x64
           path: dist/Labelme-Windows-Setup-x64.exe
           if-no-files-found: error
-
   build-macos:
     name: Build macOS Installer (Apple Silicon arm64)
     runs-on: macos-latest
@@ -81,45 +69,36 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
         with:
           fetch-depth: 0
-
       - name: Set up uv
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: '3.12'
           enable-cache: true
-
       - name: Install dependencies and PyInstaller
         run: |
           uv sync --no-dev
           uv pip install pyinstaller
-
       - name: Install create-dmg
         run: brew install create-dmg
-
       - name: Resolve Labelme version
         run: |
           version=$(uv run python -c "import labelme; print(labelme.__version__)")
           echo "LABELME_VERSION=$version" >> "$GITHUB_ENV"
           echo "Detected version: $version"
-
       - name: Generate macOS icon and build app with PyInstaller
         run: |
           bash tools/installer/build_mac_dmg.sh --icon-only
           uv run pyinstaller Labelme.spec --noconfirm
-
       - name: Smoke test frozen app
         run: ./dist/Labelme.app/Contents/MacOS/Labelme --version
-
       - name: Package .dmg installer
         run: bash tools/installer/build_mac_dmg.sh
-
       - name: Upload macOS Installer Artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: Labelme-macOS-arm64
           path: dist/Labelme-macOS-arm64.dmg
           if-no-files-found: error
-
   release:
     name: Attach Installers to GitHub Release
     needs: [build-windows, build-macos]
@@ -128,24 +107,21 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-
       - name: Download Windows Installer
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           name: Labelme-Windows-Setup-x64
           path: release-assets
-
       - name: Download macOS Installer
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           name: Labelme-macOS-arm64
           path: release-assets
-
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
+        run: |-
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" release-assets/* --repo "${GITHUB_REPOSITORY}" --clobber
           else
