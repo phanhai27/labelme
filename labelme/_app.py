@@ -533,6 +533,11 @@ class MainWindow(QtWidgets.QMainWindow):
         # lupdate does not see tr() inside f-strings, so the About text is
         # translated before it is assembled.
         tagline = self.tr("Image Polygonal Annotation with Python")
+        medical_dicom_info = self.tr(
+            "Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit "
+            "imaging, clinical Window/Level (WL/WW) presets, Slicer Data "
+            "Probe, and zero-loss JSON annotations."
+        )
         version = self.tr("Version: %s") % __version__
         author = self.tr("Author: %s") % "Kentaro Wada"
         homepage = self.tr("Homepage")
@@ -548,6 +553,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 f"""
 <h3>{__appname__}</h3>
 <p>{tagline}</p>
+<p>{medical_dicom_info}</p>
 <p>{version}</p>
 <p>{author}</p>
 <p>

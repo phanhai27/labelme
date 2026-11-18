@@ -698,3 +698,27 @@ def test_tc_erg_05_right_drag_adjusts_wl_ww_without_opening_context_menu(
     assert win._dicom_session.window_width == ww_after_drag
     assert opened_menus == ["canvas"]
     win.close()
+
+
+def test_about_dialog_includes_medical_dicom_support(
+    *, tmp_path: Path, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dcm_path = _create_chest_ct_dicom(path=tmp_path / "chest_ct_slice.dcm")
+    captured_about: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        _app.QMessageBox,
+        "about",
+        lambda _parent, title, text: captured_about.append((title, text)),
+    )
+
+    win = _make_window(qtbot=qtbot, file_or_dir=str(dcm_path))
+    win._actions.about.trigger()
+
+    assert len(captured_about) == 1
+    _title, html_text = captured_about[0]
+    assert "Medical DICOM" in html_text
+    assert ".dcm" in html_text
+    assert ".dicom" in html_text
+    assert "Hounsfield Unit" in html_text
+    assert "WL/WW" in html_text
+    win.close()

@@ -57,6 +57,7 @@ It is written in Python and uses Qt for its graphical interface.
 - [x] Exporting COCO-format dataset for [instance segmentation](examples/instance_segmentation)
 - [x] AI-assisted point-to-polygon/mask annotation by SAM, EfficientSAM models
 - [x] AI text-to-annotation by YOLO-world, SAM3 models
+- [x] Medical DICOM (`.dcm`, `.dicom`) 16-bit Hounsfield Unit support (`SimpleITK` + `pydicom`), clinical Window/Level (`WL/WW`) presets, Slicer Data Probe (`HU` readout under cursor), and zero-loss JSON annotation storage (`imageData: null`)
 
 **🌏 Available in 21 languages** - English · 日本語 · 한국어 · 简体中文 · 繁體中文 · Deutsch · Ελληνικά · Français · Español · Italiano · Português · Nederlands · Magyar · Русский · ไทย · Tiếng Việt · Türkçe · Українська · Polski · Bahasa Indonesia · فارسی (`LANG=ja_JP.UTF-8 labelme`)
 
@@ -147,6 +148,8 @@ folder, or dragged into the window when Pillow has OpenJPEG support. They are
 decoded to PNG in memory for Qt, preserving pixel values and transparency;
 the source image is unchanged.
 
+Medical DICOM images (`.dcm`, `.dicom`) are decoded directly from 16-bit raw pixel data with Modality LUT (`RescaleSlope` / `RescaleIntercept`) into 32-bit float Hounsfield Units (`HU`) via `SimpleITK` and `pydicom`. Annotations are saved with `imageData: null`, strictly sanitized PII-free 3D spatial geometry (`pixelSpacingMm`, `sliceThicknessMm`, `imagePositionPatient`, `imageOrientationPatient`), and the active `viewState` (`appliedWindowCenter`, `appliedWindowWidth`, `appliedPresetName`, `isInverted`).
+
 ```bash
 labelme  # just open gui
 
@@ -163,6 +166,57 @@ cd examples/semantic_segmentation
 labelme data_annotated/  # Open a folder to annotate all images in it
 labelme data_annotated/ --labels labels.txt  # specify label list with a file
 ```
+
+### Mouse & Keyboard Shortcuts (Canvas Navigation, Drawing & Medical DICOM)
+
+#### 1. Focal Zoom & View Fitting
+
+| Action | Mouse / Shortcut | Description |
+| :--- | :--- | :--- |
+| **Focal Zoom In / Out** | `Mouse Wheel` (or `Ctrl + Wheel`) | Zoom in/out directly anchored at the cursor position |
+| **Step Zoom In / Out** | `Ctrl + +` / `Ctrl + -` | Zoom in or out around the viewport center |
+| **Fit to Window** | `Ctrl + F` | Fit the entire image inside the viewport |
+| **Fit to Selection** | `Ctrl + Shift + F` | Zoom and center on the currently selected shapes |
+| **Actual Size (100%)** | `Ctrl + 0` | Reset zoom scale to 100% |
+
+#### 2. Pan (Hand Tool & 50% Viewport Edge Over-pan)
+
+| Action | Mouse / Shortcut | Description |
+| :--- | :--- | :--- |
+| **Spring-loaded Hand Pan** | **Hold `Space` + `Left-Click Drag`** | Temporarily pan the canvas in any mode (including while mid-drawing a `Polygon` or `AI-Segment` without closing or losing the active draft); supports **50% viewport over-pan** to center peripheral/edge lesions |
+| **Pan Tool Mode** | **`H`** (or **Pan** button on Left Toolbar) | Switch to dedicated Hand Pan mode (`Left-Click Drag` pans the image) |
+| **Middle-Button Pan** | **`Middle-Click Drag`** | Pan the image at any zoom level |
+| **Select / Edit Mode** | `Ctrl + J` | Switch back to Select / Edit Shapes mode |
+
+#### 3. Drawing & Finalizing Annotations
+
+| Action | Mouse / Shortcut | Description |
+| :--- | :--- | :--- |
+| **Finalize / Close Shape** | **`Enter` (`Return`)** or `Double-Click` | Finalize and close the active `Polygon`, `LineStrip`, `AI-Segment`, or `AI-Find All` draft |
+| **Undo Last Point** | `Backspace` / `Ctrl + Z` | Remove the last placed vertex while drawing |
+| **Cancel Active Draft** | `Esc` | Discard the shape or AI draft currently being drawn |
+
+#### 4. Image / Slice Navigation
+
+| Action | Mouse / Shortcut | Description |
+| :--- | :--- | :--- |
+| **Scroll Previous / Next Slice** | **`Shift + Mouse Wheel`** | Rapidly scroll through Previous (`Wheel Up`) / Next (`Wheel Down`) slices or images in the folder (automatically locked while actively drawing a shape) |
+| **Previous / Next Image** | **`A`** / **`D`** | Open the previous (`A`) or next (`D`) image/slice in the list |
+| **Scrollbar Scroll** | `Alt + Mouse Wheel` | Traditional vertical/horizontal scrollbar scrolling |
+
+#### 5. Medical DICOM Window/Level (`WL/WW`) & Clinical Presets
+
+| Action | Mouse / Shortcut | Window Center (`WL`) | Window Width (`WW`) | Description |
+| :--- | :---: | :---: | :---: | :--- |
+| **Interactive WL/WW Drag** | **`Right-Click Drag`** | Vertical drag (`-dy`) | Horizontal drag (`+dx`) | Real-time PACS/Slicer-style windowing directly on the Canvas (a stationary `Right-Click` still opens the Context Menu) |
+| **Auto Window** | **`1`** | Header / `P1–P99` | Header / `P1–P99` | Restore default DICOM header or percentile `[1%, 99%]` window |
+| **CT Brain** | **`2`** | `40` | `80` | Brain parenchyma window |
+| **CT Lung** | **`3`** | `-600` | `1500` | Lung parenchyma window |
+| **CT Soft Tissue** | **`4`** | `40` | `400` | Mediastinum / soft tissue window |
+| **CT Liver** | **`5`** | `60` | `160` | Hepatic parenchyma window |
+| **CT Bone** | **`6`** | `400` | `1800` | Cortical / trabecular bone window |
+| **CT Stroke** | **`7`** | `32` | `8` | High-contrast acute ischemic stroke window |
+| **Invert Monochrome** | **`I`** | *(unchanged)* | *(unchanged)* | Toggle monochrome inversion (`MONOCHROME1` / `MONOCHROME2`) |
 
 ### Command Line Arguments
 
