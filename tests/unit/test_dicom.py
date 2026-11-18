@@ -722,3 +722,24 @@ def test_about_dialog_includes_medical_dicom_support(
     assert "Hounsfield Unit" in html_text
     assert "WL/WW" in html_text
     win.close()
+
+
+def test_build_installers_workflow_release_job_has_repo_context() -> None:
+    workflow_path = (
+        Path(__file__).resolve().parents[2]
+        / ".github"
+        / "workflows"
+        / "build-installers.yml"
+    )
+    content = workflow_path.read_text(encoding="utf-8")
+    release_section = content.split("  release:", maxsplit=1)[1]
+
+    assert "actions/checkout@" in release_section
+    assert "GH_REPO: ${{ github.repository }}" in release_section
+    assert 'gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}"' in (
+        release_section
+    )
+    assert 'gh release upload "${GITHUB_REF_NAME}" release-assets/* --repo' in (
+        release_section
+    )
+    assert '--repo "${GITHUB_REPOSITORY}"' in release_section
