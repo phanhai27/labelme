@@ -171,10 +171,6 @@
         <translation>ESC برای لغو</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter یا Space برای نهایی کردن</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>ویرایش اشکال</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>گوشهٔ دیگر را انتخاب کنید. برای مربع، Shift را نگه دارید.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter برای نهایی کردن</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>جابجایی نما</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>حاشیه‌نویسی چندضلعی تصویر با Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>پشتیبانی از تصویربرداری پزشکی DICOM (.dcm, .dicom) با واحد هانسفیلد ۱۶ بیتی، پیش‌تنظیم‌های بالینی پنجره/سطح (WL/WW)، کاوشگر داده Slicer و حاشیه‌نویسی JSON بدون افت کیفیت.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>نسخه: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>بازگشت</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;جابجایی</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>جابجایی</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>جابجایی در اطراف تصویر</translation>
     </message>
     <message>
         <source>AI-Segment</source>

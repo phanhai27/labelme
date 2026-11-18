@@ -171,10 +171,6 @@
         <translation>ESC 키를 눌러 취소</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter 또는 Space로 완료</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>도형 편집 중</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>다른 모서리를 선택하세요. 정사각형을 그리려면 Shift를 누른 상태로 조작하세요.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter로 완료</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>보기 이동 중</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>Python을 이용한 이미지 다각형 주석</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>의료용 DICOM (.dcm, .dicom) 16비트 하운스필드 단위 영상, 임상용 윈도우/레벨 (WL/WW) 프리셋, Slicer Data Probe 및 무손실 JSON 주석을 지원합니다.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>버전: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>실행 취소</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>이동(&amp;P)</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>이동</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>이미지 이동</translation>
     </message>
     <message>
         <source>AI-Segment</source>

@@ -171,10 +171,6 @@
         <translation>ESC per annullare</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Invio o Spazio per finalizzare</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Modifica delle forme</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>Scegli l’altro angolo. Tieni premuto Shift per un quadrato.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Invio per finalizzare</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Spostamento vista</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>Annotazione poligonale di immagini con Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Supporta l&apos;imaging medico DICOM (.dcm, .dicom) a 16 bit in unità Hounsfield, i preset clinici Finestra/Livello (WL/WW), Slicer Data Probe e annotazioni JSON senza perdita.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Versione: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>Annulla</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Sposta</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Sposta</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Sposta l&apos;immagine</translation>
     </message>
     <message>
         <source>AI-Segment</source>

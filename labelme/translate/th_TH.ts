@@ -171,10 +171,6 @@
         <translation>กด ESC เพื่อยกเลิก</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>กด Enter หรือ Space เพื่อยืนยัน</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>แก้ไขรูปร่าง</translation>
     </message>
@@ -261,6 +257,14 @@
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
         <translation>Enter เพิ่มผลลัพธ์ Esc ทิ้งผลลัพธ์ กด %s ค้างไว้แล้ววาดกรอบเพื่อยกเว้นวัตถุที่คล้ายกัน</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>กด Enter เพื่อยืนยัน</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>กำลังเลื่อนมุมมอง</translation>
     </message>
     <message>
         <source>Click the next point, or hold %s and click to finish the LineStrip</source>
@@ -561,6 +565,10 @@
         <translation>การทำคำอธิบายประกอบรูปภาพแบบรูปหลายเหลี่ยมด้วย Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>รองรับภาพทางการแพทย์ DICOM (.dcm, .dicom) 16 บิตหน่วย Hounsfield, ค่าล่วงหน้าทางคลินิก Window/Level (WL/WW), Slicer Data Probe และคำอธิบายประกอบ JSON แบบไม่สูญเสียข้อมูล</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>เวอร์ชัน: %s</translation>
     </message>
@@ -694,6 +702,19 @@
     <message>
         <source>Undo</source>
         <translation>ยกเลิก</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;เลื่อนภาพ</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>เลื่อนภาพ</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>เลื่อนดูรอบรูปภาพ</translation>
     </message>
     <message>
         <source>AI-Segment</source>

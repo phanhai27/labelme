@@ -171,10 +171,6 @@
         <translation>Nhấn ESC để hủy</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Nhấn Enter hoặc Space để hoàn tất</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Chỉnh sửa hình dạng</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>Chọn góc còn lại. Giữ Shift để vẽ hình vuông.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Nhấn Enter để hoàn tất</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Đang kéo vùng xem</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>Chú thích hình ảnh dạng đa giác bằng Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Hỗ trợ ảnh y tế DICOM (.dcm, .dicom) 16-bit theo đơn vị Hounsfield, thiết lập sẵn Window/Level (WL/WW) lâm sàng, Slicer Data Probe và chú thích JSON không mất dữ liệu.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Phiên bản: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>Hoàn tác</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Kéo ảnh</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Kéo ảnh</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Kéo di chuyển quanh ảnh</translation>
     </message>
     <message>
         <source>AI-Segment</source>

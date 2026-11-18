@@ -171,10 +171,6 @@
         <translation>ESC でキャンセル</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter または Space で確定</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>図形を編集中</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>もう一方の角を指定してください。Shiftを押しながら操作すると正方形になります。</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter で確定</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>ビューを移動中</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -565,6 +569,10 @@
         <translation>Python による画像のポリゴンアノテーション</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>医療用 DICOM (.dcm, .dicom) 16ビット ハンスフィールド単位画像、臨床用 ウィンドウ/レベル (WL/WW) プリセット、Slicer Data Probe、およびロスレス JSON アノテーションに対応しています。</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>バージョン: %s</translation>
     </message>
@@ -701,6 +709,19 @@
     <message>
         <source>Undo</source>
         <translation>元に戻す</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>移動(&amp;P)</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>移動</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>画像を移動</translation>
     </message>
     <message>
         <source>AI-Segment</source>

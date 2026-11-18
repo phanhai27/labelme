@@ -155,10 +155,6 @@
         <translation>ESC для скасування</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter або пробіл для завершення</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Редагування фігур</translation>
     </message>
@@ -225,6 +221,14 @@
     <message>
         <source>Click center point for circle</source>
         <translation>Натисніть центральну точку для кола</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter для завершення</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Переміщення вигляду</translation>
     </message>
     <message>
         <source>Click points to include, hold %s and click to exclude, or drag a box. Hold %s and click to finish.</source>
@@ -580,6 +584,10 @@
         <translation>Полігональна анотація зображень на Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Підтримує медичну візуалізацію DICOM (.dcm, .dicom) з 16-бітними одиницями Хаунсфілда, клінічні пресети Вікно/Рівень (WL/WW), Slicer Data Probe та анотації JSON без втрат.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Версія: %s</translation>
     </message>
@@ -721,6 +729,19 @@
     <message>
         <source>Delete the selected point from the polygon or LineStrip</source>
         <translation>Видаляє вибрану точку з багатокутника або ламаної</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Переміщення</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Переміщення</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Переміщувати зображення</translation>
     </message>
     <message>
         <source>Click to place LineStrip points; hold %s and click to place the last one.</source>

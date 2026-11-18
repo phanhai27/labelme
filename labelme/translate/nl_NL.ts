@@ -171,10 +171,6 @@
         <translation>ESC om te annuleren</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter of Spatie om te voltooien</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Vormen bewerken</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>Kies de andere hoek. Houd Shift ingedrukt voor een vierkant.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter om te voltooien</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Weergave verschuiven</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>Polygonale beeldannotatie met Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Ondersteunt medische DICOM (.dcm, .dicom) 16-bit Hounsfield Unit-beeldvorming, klinische Window/Level (WL/WW)-voorinstellingen, Slicer Data Probe en verliesvrije JSON-annotaties.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Versie: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>Ongedaan maken</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Verschuiven</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Verschuiven</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Afbeelding verschuiven</translation>
     </message>
     <message>
         <source>AI-Segment</source>

@@ -155,10 +155,6 @@
         <translation>ESC zum Abbrechen</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter oder Leertaste zum Abschließen</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Formen bearbeiten</translation>
     </message>
@@ -225,6 +221,14 @@
     <message>
         <source>Click center point for circle</source>
         <translation>Mittelpunkt des Kreises anklicken</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter zum Abschließen</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Ansicht schwenken</translation>
     </message>
     <message>
         <source>Click points to include, hold %s and click to exclude, or drag a box. Hold %s and click to finish.</source>
@@ -580,6 +584,10 @@
         <translation>Polygonale Bildannotation mit Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Unterstützt medizinische DICOM-Bildgebung (.dcm, .dicom) mit 16-Bit-Hounsfield-Einheiten, klinische Window/Level-(WL/WW)-Voreinstellungen, Slicer Data Probe und verlustfreie JSON-Annotationen.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Version: %s</translation>
     </message>
@@ -709,6 +717,19 @@
     <message>
         <source>Undo</source>
         <translation>Rückgängig</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Schwenken</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Schwenken</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Bild schwenken</translation>
     </message>
     <message>
         <source>AI-Segment</source>

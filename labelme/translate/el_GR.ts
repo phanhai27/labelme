@@ -155,10 +155,6 @@
         <translation>(Esc για ακύρωση)</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Είσοδος ή χώρος για οριστικοποίηση</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Επεξεργασία σχημάτων</translation>
     </message>
@@ -225,6 +221,14 @@
     <message>
         <source>Click center point for circle</source>
         <translation>Κάντε κλικ στο κεντρικό σημείο για τον κύκλο</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter για οριστικοποίηση</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Μετακίνηση προβολής</translation>
     </message>
     <message>
         <source>Click points to include, hold %s and click to exclude, or drag a box. Hold %s and click to finish.</source>
@@ -580,6 +584,10 @@
         <translation>Πολυγωνική επισημείωση εικόνων με Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Υποστηρίζει ιατρική απεικόνιση DICOM (.dcm, .dicom) 16-bit μονάδων Hounsfield, κλινικές προεπιλογές Window/Level (WL/WW), Slicer Data Probe και επισημειώσεις JSON χωρίς απώλειες.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Έκδοση: %s</translation>
     </message>
@@ -721,6 +729,19 @@
     <message>
         <source>Delete the selected point from the polygon or LineStrip</source>
         <translation>Διαγράφει το επιλεγμένο σημείο από το πολύγωνο ή την τεθλασμένη γραμμή</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Μετακίνηση</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Μετακίνηση</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Μετακίνηση στην εικόνα</translation>
     </message>
     <message>
         <source>Click to place LineStrip points; hold %s and click to place the last one.</source>

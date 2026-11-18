@@ -155,10 +155,6 @@
         <translation>ESC a megszakításhoz</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter vagy Szóköz a befejezéshez</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Alakzatok szerkesztése</translation>
     </message>
@@ -225,6 +221,14 @@
     <message>
         <source>Click center point for circle</source>
         <translation>Kattintson a kör középpontjára</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter a befejezéshez</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Nézet mozgatása</translation>
     </message>
     <message>
         <source>Click points to include, hold %s and click to exclude, or drag a box. Hold %s and click to finish.</source>
@@ -580,6 +584,10 @@
         <translation>Sokszöges képannotáció Pythonnal</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Támogatja az orvosi DICOM (.dcm, .dicom) 16 bites Hounsfield-egység képalkotást, a klinikai Ablak/Szint (WL/WW) előbeállításokat, a Slicer Data Probe eszközt és a veszteségmentes JSON annotációkat.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Verzió: %s</translation>
     </message>
@@ -709,6 +717,19 @@
     <message>
         <source>Undo</source>
         <translation>Visszavonás</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Mozgatás</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Mozgatás</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Kép mozgatása</translation>
     </message>
     <message>
         <source>AI-Segment</source>

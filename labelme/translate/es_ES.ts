@@ -171,10 +171,6 @@
         <translation>ESC para cancelar</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter o Espacio para finalizar</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Editando formas</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>Elige la otra esquina. Mantén pulsado Shift para un cuadrado.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter para finalizar</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Desplazando vista</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>Anotación poligonal de imágenes con Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Compatible con imágenes médicas DICOM (.dcm, .dicom) de 16 bits en unidades Hounsfield, preajustes clínicos de Ventana/Nivel (WL/WW), Slicer Data Probe y anotaciones JSON sin pérdidas.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Versión: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>Deshacer</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Desplazar</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Desplazar</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Desplazar la imagen</translation>
     </message>
     <message>
         <source>AI-Segment</source>

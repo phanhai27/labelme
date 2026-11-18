@@ -171,10 +171,6 @@
         <translation>ESC untuk membatalkan</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Enter atau Spasi untuk finalisasi</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Mengedit bentuk</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>Pilih sudut lainnya. Tahan Shift untuk membuat persegi.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Enter untuk finalisasi</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Menggeser tampilan</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -499,6 +503,10 @@
         <translation>Anotasi Gambar Poligonal dengan Python</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Mendukung pencitraan medis DICOM (.dcm, .dicom) 16-bit Hounsfield Unit, prasetel klinis Window/Level (WL/WW), Slicer Data Probe, dan anotasi JSON tanpa kehilangan data.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Versi: %s</translation>
     </message>
@@ -632,6 +640,19 @@
     <message>
         <source>Undo</source>
         <translation>Urungkan</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Geser</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Geser</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Geser gambar</translation>
     </message>
     <message>
         <source>AI-Segment</source>

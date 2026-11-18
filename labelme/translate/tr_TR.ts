@@ -171,10 +171,6 @@
         <translation>İptal etmek için ESC</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>Tamamlamak için Enter veya Space</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>Şekiller düzenleniyor</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>Diğer köşeyi seçin. Kare çizmek için Shift tuşunu basılı tutun.</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>Tamamlamak için Enter</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>Görünüm kaydırılıyor</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>Python ile Çokgen Görüntü Açıklama</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>Tıbbi DICOM (.dcm, .dicom) 16-bit Hounsfield Birimi görüntülemeyi, klinik Pencere/Seviye (WL/WW) ön ayarlarını, Slicer Data Probe&apos;u ve kayıpsız JSON açıklamalarını destekler.</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>Sürüm: %s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>Geri Al</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>&amp;Kaydır</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>Kaydır</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>Görüntü üzerinde kaydır</translation>
     </message>
     <message>
         <source>AI-Segment</source>

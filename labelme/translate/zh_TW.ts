@@ -171,10 +171,6 @@
         <translation>按 ESC 取消</translation>
     </message>
     <message>
-        <source>Enter or Space to finalize</source>
-        <translation>按 Enter 或空格鍵完成</translation>
-    </message>
-    <message>
         <source>Editing shapes</source>
         <translation>編輯形狀</translation>
     </message>
@@ -257,6 +253,14 @@
     <message>
         <source>Choose the other corner. Hold Shift for a square.</source>
         <translation>選擇另一個角。按住Shift可繪製正方形。</translation>
+    </message>
+    <message>
+        <source>Enter to finalize</source>
+        <translation>按 Enter 完成</translation>
+    </message>
+    <message>
+        <source>Panning view</source>
+        <translation>正在平移檢視</translation>
     </message>
     <message>
         <source>Enter adds the results, Esc discards them. Hold %s and draw a box to exclude objects like it.</source>
@@ -560,6 +564,10 @@
         <translation>以 Python 進行影像多邊形標註</translation>
     </message>
     <message>
+        <source>Supports Medical DICOM (.dcm, .dicom) 16-bit Hounsfield Unit imaging, clinical Window/Level (WL/WW) presets, Slicer Data Probe, and zero-loss JSON annotations.</source>
+        <translation>支援醫療 DICOM (.dcm, .dicom) 16 位元亨氏單位影像、臨床窗寬/窗位 (WL/WW) 預設、Slicer Data Probe 以及無損 JSON 標註。</translation>
+    </message>
+    <message>
         <source>Version: %s</source>
         <translation>版本：%s</translation>
     </message>
@@ -693,6 +701,19 @@
     <message>
         <source>Undo</source>
         <translation>復原</translation>
+    </message>
+    <message>
+        <source>&amp;Pan</source>
+        <translation>平移(&amp;P)</translation>
+    </message>
+    <message>
+        <source>Pan</source>
+        <comment>toolbar</comment>
+        <translation>平移</translation>
+    </message>
+    <message>
+        <source>Pan around the image</source>
+        <translation>平移影像</translation>
     </message>
     <message>
         <source>AI-Segment</source>
