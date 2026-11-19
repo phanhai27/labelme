@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QStyle
 
 from .. import _utils
+from .._medical_terminology import get_terminology_registry
 from .._shape import Shape
 
 LABEL_COLOR_ROLE: Final = Qt.ItemDataRole.UserRole.value + 1
@@ -21,7 +22,9 @@ LABEL_COLOR_ROLE: Final = Qt.ItemDataRole.UserRole.value + 1
 
 def format_shape_label(*, shape: Shape) -> str:
     assert shape.label is not None
-    text = shape.label
+    text = get_terminology_registry().get_display_label(
+        canonical_label=shape.label, category_filter_active=False
+    )
     if shape.group_id is not None:
         text += f" ({shape.group_id})"
     enabled_flags = [key for key, value in (shape.flags or {}).items() if value]
@@ -396,3 +399,20 @@ class LabelListWidget(QtWidgets.QListView):
 
     def clear(self) -> None:
         self._model.clear()
+
+    def refresh_locale_display(self) -> None:
+        for row in range(self._model.rowCount()):
+            item = cast(LabelListWidgetItem, self._model.item(row, 0))
+            shape = item.shape()
+            if shape is not None and shape.label is not None:
+                text = format_shape_label(shape=shape)
+                item.setText(text)
+                item.setToolTip(
+                    QtGui.Qt.convertFromPlainText(text, Qt.WhiteSpaceMode.WhiteSpacePre)
+                )
+
+    @override
+    def changeEvent(self, event: QtCore.QEvent, /) -> None:
+        super().changeEvent(event)
+        if event.type() == QtCore.QEvent.Type.LanguageChange:
+            self.refresh_locale_display()

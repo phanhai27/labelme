@@ -304,6 +304,13 @@
     </message>
 </context>
 <context>
+    <name>CategoryFilterComboBox</name>
+    <message>
+        <source>All</source>
+        <translation>Tất cả</translation>
+    </message>
+</context>
+<context>
     <name>ConversionDetailDialog</name>
     <message>
         <source>Polygon detail</source>
@@ -358,6 +365,18 @@
     <message>
         <source>Description</source>
         <translation>Mô tả</translation>
+    </message>
+    <message>
+        <source>Select Medical Label Preset</source>
+        <translation>Chọn bộ nhãn y khoa</translation>
+    </message>
+    <message>
+        <source>Filter by Anatomical Category</source>
+        <translation>Lọc theo nhóm giải phẫu</translation>
+    </message>
+    <message>
+        <source>Add New Medical Label…</source>
+        <translation>Thêm nhãn y khoa mới…</translation>
     </message>
 </context>
 <context>
@@ -1401,6 +1420,100 @@ Vị trí dự kiến: {path}</translation>
     </message>
 </context>
 <context>
+    <name>MedicalLabelFormDialog</name>
+    <message>
+        <source>Canonical English label is required for AI JSON storage.</source>
+        <translation>Nhãn chuẩn Tiếng Anh là bắt buộc để lưu JSON huấn luyện AI.</translation>
+    </message>
+    <message>
+        <source>Canonical English label must use standard English (ASCII) characters without Vietnamese accents. Enter Vietnamese names in the Vietnamese field below.</source>
+        <translation>Nhãn chuẩn Tiếng Anh phải dùng ký tự Tiếng Anh không dấu (ASCII). Vui lòng nhập tên Tiếng Việt vào ô Tiếng Việt bên dưới.</translation>
+    </message>
+    <message>
+        <source>Canonical English label must contain at least one English letter.</source>
+        <translation>Nhãn chuẩn Tiếng Anh phải chứa ít nhất một chữ cái Tiếng Anh.</translation>
+    </message>
+    <message>
+        <source>Label &apos;{label}&apos; already exists in the current preset.</source>
+        <translation>Nhãn &apos;{label}&apos; đã tồn tại trong bộ nhãn hiện tại.</translation>
+    </message>
+    <message>
+        <source>Add Medical Label</source>
+        <translation>Thêm nhãn y khoa</translation>
+    </message>
+    <message>
+        <source>e.g. Rib fracture (Canonical English for AI JSON)</source>
+        <translation>VD: Rib fracture (Nhãn chuẩn Tiếng Anh lưu JSON cho AI)</translation>
+    </message>
+    <message>
+        <source>e.g. Gãy xương sườn (Optional)</source>
+        <translation>VD: Gãy xương sườn (Tùy chọn)</translation>
+    </message>
+    <message>
+        <source>e.g. Fracture (Short name in category)</source>
+        <translation>VD: Fracture (Tên rút gọn trong nhóm)</translation>
+    </message>
+    <message>
+        <source>e.g. Gãy (Short Vietnamese name in category)</source>
+        <translation>VD: Gãy (Tên Tiếng Việt rút gọn trong nhóm)</translation>
+    </message>
+    <message>
+        <source>Canonical English Label *:</source>
+        <translation>Nhãn chuẩn Tiếng Anh *:</translation>
+    </message>
+    <message>
+        <source>Vietnamese Display Name:</source>
+        <translation>Tên hiển thị Tiếng Việt:</translation>
+    </message>
+    <message>
+        <source>Short English Name:</source>
+        <translation>Tên Tiếng Anh rút gọn:</translation>
+    </message>
+    <message>
+        <source>Short Vietnamese Name:</source>
+        <translation>Tên Tiếng Việt rút gọn:</translation>
+    </message>
+    <message>
+        <source>Anatomical Category:</source>
+        <translation>Nhóm giải phẫu:</translation>
+    </message>
+    <message>
+        <source>Display Color:</source>
+        <translation>Màu hiển thị:</translation>
+    </message>
+</context>
+<context>
+    <name>MedicalPresetFormDialog</name>
+    <message>
+        <source>Preset name cannot be empty.</source>
+        <translation>Tên bộ nhãn không được để trống.</translation>
+    </message>
+    <message>
+        <source>Preset &apos;{name}&apos; already exists.</source>
+        <translation>Bộ nhãn &apos;{name}&apos; đã tồn tại.</translation>
+    </message>
+    <message>
+        <source>Create Label Preset</source>
+        <translation>Tạo bộ nhãn mới</translation>
+    </message>
+    <message>
+        <source>e.g. Brain CT</source>
+        <translation>VD: Brain CT</translation>
+    </message>
+    <message>
+        <source>e.g. CT Sọ não (Optional)</source>
+        <translation>VD: CT Sọ não (Tùy chọn)</translation>
+    </message>
+    <message>
+        <source>Preset Name (English) *:</source>
+        <translation>Tên bộ nhãn (Tiếng Anh) *:</translation>
+    </message>
+    <message>
+        <source>Vietnamese Name:</source>
+        <translation>Tên Tiếng Việt:</translation>
+    </message>
+</context>
+<context>
     <name>ModelPicker</name>
     <message>
         <source>Manage models…</source>
@@ -1543,6 +1656,13 @@ Vị trí dự kiến: {path}</translation>
     <message>
         <source>Delete {model} from this computer? Its selections will be cleared. Your annotations will not change.</source>
         <translation>Xóa {model} khỏi máy tính này? Các lựa chọn mô hình này sẽ bị xóa. Chú thích của bạn sẽ không thay đổi.</translation>
+    </message>
+</context>
+<context>
+    <name>PresetSelectorComboBox</name>
+    <message>
+        <source>+ New Preset…</source>
+        <translation>+ Tạo bộ nhãn mới…</translation>
     </message>
 </context>
 <context>
@@ -1825,6 +1945,18 @@ Vị trí dự kiến: {path}</translation>
 </context>
 <context>
     <name>UniqueLabelQListWidget</name>
+    <message>
+        <source>Select Medical Label Preset</source>
+        <translation>Chọn bộ nhãn y khoa</translation>
+    </message>
+    <message>
+        <source>Filter by Anatomical Category</source>
+        <translation>Lọc theo nhóm giải phẫu</translation>
+    </message>
+    <message>
+        <source>Add New Medical Label…</source>
+        <translation>Thêm nhãn y khoa mới…</translation>
+    </message>
     <message>
         <source>Label set</source>
         <translation>Bộ nhãn</translation>

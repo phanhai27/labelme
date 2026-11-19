@@ -304,6 +304,13 @@
     </message>
 </context>
 <context>
+    <name>CategoryFilterComboBox</name>
+    <message>
+        <source>All</source>
+        <translation>All</translation>
+    </message>
+</context>
+<context>
     <name>ConversionDetailDialog</name>
     <message>
         <source>Polygon detail</source>
@@ -358,6 +365,18 @@
     <message>
         <source>Description</source>
         <translation>설명</translation>
+    </message>
+    <message>
+        <source>Select Medical Label Preset</source>
+        <translation>Select Medical Label Preset</translation>
+    </message>
+    <message>
+        <source>Filter by Anatomical Category</source>
+        <translation>Filter by Anatomical Category</translation>
+    </message>
+    <message>
+        <source>Add New Medical Label…</source>
+        <translation>Add New Medical Label…</translation>
     </message>
 </context>
 <context>
@@ -1401,6 +1420,100 @@ Expected location: {path}</source>
     </message>
 </context>
 <context>
+    <name>MedicalLabelFormDialog</name>
+    <message>
+        <source>Canonical English label is required for AI JSON storage.</source>
+        <translation>Canonical English label is required for AI JSON storage.</translation>
+    </message>
+    <message>
+        <source>Canonical English label must use standard English (ASCII) characters without Vietnamese accents. Enter Vietnamese names in the Vietnamese field below.</source>
+        <translation>Canonical English label must use standard English (ASCII) characters without Vietnamese accents. Enter Vietnamese names in the Vietnamese field below.</translation>
+    </message>
+    <message>
+        <source>Canonical English label must contain at least one English letter.</source>
+        <translation>Canonical English label must contain at least one English letter.</translation>
+    </message>
+    <message>
+        <source>Label &apos;{label}&apos; already exists in the current preset.</source>
+        <translation>Label &apos;{label}&apos; already exists in the current preset.</translation>
+    </message>
+    <message>
+        <source>Add Medical Label</source>
+        <translation>Add Medical Label</translation>
+    </message>
+    <message>
+        <source>e.g. Rib fracture (Canonical English for AI JSON)</source>
+        <translation>e.g. Rib fracture (Canonical English for AI JSON)</translation>
+    </message>
+    <message>
+        <source>e.g. Gãy xương sườn (Optional)</source>
+        <translation>e.g. Gãy xương sườn (Optional)</translation>
+    </message>
+    <message>
+        <source>e.g. Fracture (Short name in category)</source>
+        <translation>e.g. Fracture (Short name in category)</translation>
+    </message>
+    <message>
+        <source>e.g. Gãy (Short Vietnamese name in category)</source>
+        <translation>e.g. Gãy (Short Vietnamese name in category)</translation>
+    </message>
+    <message>
+        <source>Canonical English Label *:</source>
+        <translation>Canonical English Label *:</translation>
+    </message>
+    <message>
+        <source>Vietnamese Display Name:</source>
+        <translation>Vietnamese Display Name:</translation>
+    </message>
+    <message>
+        <source>Short English Name:</source>
+        <translation>Short English Name:</translation>
+    </message>
+    <message>
+        <source>Short Vietnamese Name:</source>
+        <translation>Short Vietnamese Name:</translation>
+    </message>
+    <message>
+        <source>Anatomical Category:</source>
+        <translation>Anatomical Category:</translation>
+    </message>
+    <message>
+        <source>Display Color:</source>
+        <translation>Display Color:</translation>
+    </message>
+</context>
+<context>
+    <name>MedicalPresetFormDialog</name>
+    <message>
+        <source>Preset name cannot be empty.</source>
+        <translation>Preset name cannot be empty.</translation>
+    </message>
+    <message>
+        <source>Preset &apos;{name}&apos; already exists.</source>
+        <translation>Preset &apos;{name}&apos; already exists.</translation>
+    </message>
+    <message>
+        <source>Create Label Preset</source>
+        <translation>Create Label Preset</translation>
+    </message>
+    <message>
+        <source>e.g. Brain CT</source>
+        <translation>e.g. Brain CT</translation>
+    </message>
+    <message>
+        <source>e.g. CT Sọ não (Optional)</source>
+        <translation>e.g. CT Sọ não (Optional)</translation>
+    </message>
+    <message>
+        <source>Preset Name (English) *:</source>
+        <translation>Preset Name (English) *:</translation>
+    </message>
+    <message>
+        <source>Vietnamese Name:</source>
+        <translation>Vietnamese Name:</translation>
+    </message>
+</context>
+<context>
     <name>ModelPicker</name>
     <message>
         <source>Manage models…</source>
@@ -1543,6 +1656,13 @@ Expected location: {path}</source>
     <message>
         <source>Delete {model} from this computer? Its selections will be cleared. Your annotations will not change.</source>
         <translation>이 컴퓨터에서 {model}을 삭제할까요? 이 모델의 선택이 해제됩니다. 주석은 변경되지 않습니다.</translation>
+    </message>
+</context>
+<context>
+    <name>PresetSelectorComboBox</name>
+    <message>
+        <source>+ New Preset…</source>
+        <translation>+ New Preset…</translation>
     </message>
 </context>
 <context>
@@ -1825,6 +1945,18 @@ Expected location: {path}</source>
 </context>
 <context>
     <name>UniqueLabelQListWidget</name>
+    <message>
+        <source>Select Medical Label Preset</source>
+        <translation>Select Medical Label Preset</translation>
+    </message>
+    <message>
+        <source>Filter by Anatomical Category</source>
+        <translation>Filter by Anatomical Category</translation>
+    </message>
+    <message>
+        <source>Add New Medical Label…</source>
+        <translation>Add New Medical Label…</translation>
+    </message>
     <message>
         <source>Label set</source>
         <translation>레이블 세트</translation>

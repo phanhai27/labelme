@@ -3,3 +3,4 @@ extend-exclude = ["labelme/translate/", "docs/features/", "docs/qa/"]
 
 [default.extend-words]
 datas = "datas"
+hach = "hach"

@@ -13,6 +13,7 @@ from PySide6 import QtCore
 from PySide6 import QtGui
 
 from .._automation import find_mask_contours
+from .._medical_terminology import get_terminology_registry
 from .._shape import CIRCLE_POINT_COUNT
 from .._shape import LINE_POINT_COUNT
 from .._shape import ORIENTED_RECTANGLE_POINT_COUNT
@@ -265,7 +266,10 @@ def _paint_label(
 
 
 def _label_text(*, label: str, group_id: int | None) -> str:
-    return label if group_id is None else f"{label} ({group_id})"
+    display = get_terminology_registry().get_display_label(
+        canonical_label=label, category_filter_active=False
+    )
+    return display if group_id is None else f"{display} ({group_id})"
 
 
 def _paint_mask(

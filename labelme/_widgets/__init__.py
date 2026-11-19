@@ -14,6 +14,10 @@ from ._label_list_widget import LABEL_COLOR_ROLE
 from ._label_list_widget import LabelListWidget
 from ._label_list_widget import LabelListWidgetItem
 from ._label_list_widget import format_shape_label
+from ._medical_label_dialog import CategoryFilterComboBox
+from ._medical_label_dialog import MedicalLabelFormDialog
+from ._medical_label_dialog import MedicalPresetFormDialog
+from ._medical_label_dialog import PresetSelectorComboBox
 from ._models_widget import ModelsDialog
 from ._models_widget import license_link
 from ._models_widget import license_notice
@@ -36,6 +40,7 @@ __all__ = [
     "AnnotationFolderFooter",
     "BrightnessContrastDialog",
     "Canvas",
+    "CategoryFilterComboBox",
     "ConversionDetailDialog",
     "EmptyStateWidget",
     "ImageListDelegate",
@@ -44,8 +49,11 @@ __all__ = [
     "LabelDialogField",
     "LabelListWidget",
     "LabelListWidgetItem",
+    "MedicalLabelFormDialog",
+    "MedicalPresetFormDialog",
     "ModelsDialog",
     "Palette",
+    "PresetSelectorComboBox",
     "SettingsDialog",
     "StatusStats",
     "ToolBar",

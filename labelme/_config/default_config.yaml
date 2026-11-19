@@ -15,6 +15,8 @@ color_theme: system
 flags:
 label_flags:
 labels:
+label_preset: chest_xray
+custom_terminologies:
 file_search:
 sort_labels: true
 validate_label:

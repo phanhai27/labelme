@@ -44,6 +44,7 @@ from . import _image_codec
 from . import _label_file
 from . import _label_flags
 from . import _label_path
+from . import _medical_terminology
 from . import _save_request
 from . import _shape
 from . import _shape_color
@@ -290,6 +291,7 @@ class MainWindow(QtWidgets.QMainWindow):
     _config_file: Path | None
     _config: dict
     _config_overrides: dict
+    _terminology_registry: _medical_terminology.MedicalTerminologyRegistry
 
     _is_changed: bool = False
     # To tell when Undo returns to the file.
@@ -348,6 +350,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._config_file, self._config = self._load_config(
             config_file=config_file, config_overrides=config_overrides
+        )
+        self._terminology_registry = _medical_terminology.MedicalTerminologyRegistry(
+            active_preset_id=self._config.get("label_preset") or "chest_xray",
+            custom_config=self._config.get("custom_terminologies"),
+            locale=self._config.get("language"),
+        )
+        _medical_terminology.set_terminology_registry(
+            registry=self._terminology_registry
         )
         # Qt's own default is 256 MB, about 8192x8192 pixels.
         QtGui.QImageReader.setAllocationLimit(self._config["image_decode_limit_mb"])
@@ -1637,6 +1647,10 @@ class MainWindow(QtWidgets.QMainWindow):
         unique_label_list = UniqueLabelQListWidget(
             on_edit_settings_labels=self._edit_settings_labels,
             on_clear_unused=self._clear_unused_unique_labels,
+            terminology_registry=self._terminology_registry,
+            on_preset_changed=self._on_medical_preset_changed,
+            on_add_label_requested=self._open_add_medical_label_dialog,
+            on_new_preset_requested=self._open_new_medical_preset_dialog,
         )
         unique_label_list.setToolTip(
             self.tr(
@@ -1644,15 +1658,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 "Press 'Esc' to clear the selection."
             )
         )
-        if self._config["labels"]:
-            for lbl in self._config["labels"]:
-                unique_label_list.add_label_item(
-                    label=lbl,
-                    color=self._get_rgb_by_label(
-                        label=lbl, unique_label_list=unique_label_list
-                    ),
-                    from_settings=True,
-                )
+        for lbl in self._effective_predefined_labels():
+            unique_label_list.add_label_item(
+                label=lbl,
+                color=self._get_rgb_by_label(
+                    label=lbl, unique_label_list=unique_label_list
+                ),
+                from_settings=True,
+            )
         label = QtWidgets.QDockWidget(self.tr("Label List"), self)
         label.setObjectName("Label List")
         label.setWidget(unique_label_list)
@@ -2690,10 +2703,22 @@ class MainWindow(QtWidgets.QMainWindow):
         label: str,
         unique_label_list: UniqueLabelQListWidget,
     ) -> tuple[int, int, int]:
-        label_index = unique_label_list.label_index(label=label)
         shape_color = self._shape_color_preview
         if shape_color is None:
             shape_color = self._config["shape_color"]
+        if (
+            self._shape_color_preview is None
+            and shape_color["mode"] == "auto"
+            and shape_color["auto"]["shift"] == 0
+        ):
+            medical_color = self._terminology_registry.get_color(canonical_label=label)
+            if medical_color is not None:
+                return medical_color
+        label_index = unique_label_list.label_index(label=label)
+        if not self._config["labels"] and self._config.get("label_preset"):
+            preset_count = len(unique_label_list.settings_labels())
+            if label_index >= preset_count:
+                label_index -= preset_count
         return _shape_color.resolve_shape_color(
             config=shape_color,
             label=label,
@@ -4424,17 +4449,119 @@ class MainWindow(QtWidgets.QMainWindow):
     def _is_settings_editable(self) -> bool:
         return self._config_file is not None and not self._config_overrides
 
+    def _effective_predefined_labels(self) -> list[str]:
+        if self._config["labels"]:
+            return list(self._config["labels"])
+        if self._config.get("label_preset"):
+            return self._terminology_registry.canonical_labels()
+        return []
+
     def _make_label_dialog(self, *, label_history: list[str] | None) -> LabelDialog:
         return LabelDialog(
             parent=self,
-            labels=self._config["labels"],
+            labels=self._effective_predefined_labels(),
             sort_labels=self._config["sort_labels"],
             show_text_field=self._config["show_label_text_field"],
             completion=self._config["label_completion"],
             fit_to_content=self._config["fit_to_content"],
             flags=self._config["label_flags"],
             label_history=label_history,
+            terminology_registry=self._terminology_registry,
+            on_add_label_requested=self._open_add_medical_label_dialog,
+            on_preset_changed=self._on_medical_preset_changed,
+            on_new_preset_requested=self._open_new_medical_preset_dialog,
         )
+
+    def _persist_medical_terminology_config(self) -> None:
+        custom_cfg = self._terminology_registry.to_custom_config()
+        active_preset = self._terminology_registry.active_preset_id
+        self._config["custom_terminologies"] = custom_cfg
+        self._config["label_preset"] = active_preset
+        target_file = self._config_file or Path(_config.get_user_config_file())
+        with contextlib.suppress(OSError, ValueError):
+            _config.set_overrides(
+                config_file=target_file,
+                overrides=[
+                    (("label_preset",), active_preset),
+                    (("custom_terminologies",), custom_cfg),
+                ],
+            )
+
+    def _sync_medical_terminology_widgets(self) -> None:
+        self._docks.unique_label_list.preset_combo.refresh_presets()
+        self._docks.unique_label_list.category_combo.refresh_categories()
+        self._label_dialog.preset_combo.refresh_presets()
+        self._label_dialog.category_combo.refresh_categories()
+        self._apply_predefined_labels()
+
+    def _on_medical_label_added(
+        self, new_item: _medical_terminology.TerminologyItem, /
+    ) -> None:
+        self._persist_medical_terminology_config()
+        self._sync_medical_terminology_widgets()
+        if self._label_dialog.isVisible():
+            self._label_dialog.edit.setText(
+                self._terminology_registry.get_display_label(
+                    canonical_label=new_item.canonical_label,
+                    category_filter_active=self._label_dialog.is_category_filter_active(),
+                )
+            )
+            self._label_dialog._selected_canonical_label = new_item.canonical_label
+
+    def _on_medical_preset_changed(self, preset_id: str, /) -> None:
+        self._terminology_registry.set_active_preset(preset_id=preset_id)
+        self._persist_medical_terminology_config()
+        self._docks.unique_label_list.preset_combo.refresh_presets()
+        self._docks.unique_label_list.category_combo.refresh_categories(
+            keep_category_id="all"
+        )
+        self._label_dialog.preset_combo.refresh_presets()
+        self._label_dialog.category_combo.refresh_categories(keep_category_id="all")
+        self._apply_predefined_labels()
+
+    def _open_add_medical_label_dialog(
+        self,
+    ) -> _widgets.MedicalLabelFormDialog:
+        dialog = _widgets.MedicalLabelFormDialog(
+            registry=self._terminology_registry,
+            on_label_added=self._on_medical_label_added,
+            parent=self,
+        )
+        dialog.exec()
+        return dialog
+
+    def _open_new_medical_preset_dialog(
+        self,
+    ) -> _widgets.MedicalPresetFormDialog:
+        prev_id = self._terminology_registry.active_preset_id
+        dialog = _widgets.MedicalPresetFormDialog(
+            registry=self._terminology_registry,
+            on_preset_added=lambda preset: self._on_medical_preset_changed(
+                preset.preset_id
+            ),
+            parent=self,
+        )
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            self._docks.unique_label_list.preset_combo.refresh_presets()
+            self._label_dialog.preset_combo.refresh_presets()
+            for combo in (
+                self._docks.unique_label_list.preset_combo,
+                self._label_dialog.preset_combo,
+            ):
+                idx = combo.findData(prev_id)
+                if idx >= 0:
+                    with QtCore.QSignalBlocker(combo):
+                        combo.setCurrentIndex(idx)
+        return dialog
+
+    @override
+    def changeEvent(self, a0: QtCore.QEvent, /) -> None:
+        super().changeEvent(a0)
+        if a0.type() == QtCore.QEvent.Type.LanguageChange and hasattr(self, "_docks"):
+            self._docks.unique_label_list.refresh_locale_display()
+            self._label_dialog.refresh_locale_display()
+            self._docks.label_list.refresh_locale_display()
+            self._canvas_widgets.canvas.update()
 
     def _connect_persistent_actions(self) -> None:
         for key_path, action in self._persistent_actions.items():
@@ -4588,12 +4715,13 @@ class MainWindow(QtWidgets.QMainWindow):
         # from loaded/created shapes via add_label_history) is preserved, while
         # a removed predefined label drops from suggestions unless it was used
         # this session.
-        self._label_dialog.set_predefined_labels(labels=self._config["labels"] or [])
+        effective_labels = self._effective_predefined_labels()
+        self._label_dialog.set_predefined_labels(labels=effective_labels)
         # The Found in files section is append-only (a shape's label stays after
         # the shape is deleted), so a label leaving Settings stays there when
         # it was used this session, as it does in the dialog's suggestions.
         self._docks.unique_label_list.set_settings_labels(
-            labels=self._config["labels"] or [],
+            labels=effective_labels,
             found_in_annotations=self._label_dialog.label_history,
             color=lambda label: self._get_rgb_by_label(
                 label=label, unique_label_list=self._docks.unique_label_list

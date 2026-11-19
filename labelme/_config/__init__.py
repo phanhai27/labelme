@@ -112,6 +112,20 @@ def _validate_config_item(*, key_path: tuple[str, ...], value: object) -> None:
         raise ValueError(
             f"canvas.double_click must be null or 'close', but got {value!r}"
         )
+    if (
+        key_path == ("label_preset",)
+        and value is not None
+        and not isinstance(value, str)
+    ):
+        raise ValueError(f"label_preset must be a string or null, but got {value!r}")
+    if (
+        key_path == ("custom_terminologies",)
+        and value is not None
+        and not isinstance(value, dict)
+    ):
+        raise ValueError(
+            f"custom_terminologies must be a mapping or null, but got {value!r}"
+        )
     if key != "labels" or value is None:
         return
     if not isinstance(value, list):
