@@ -38,10 +38,9 @@ ______________________________________________________________________
 | Tầng / Màn hình | Tên Class / File | Định danh (`objectName` / Thuộc tính) | Vai trò & Hành vi |
 | :--- | :--- | :--- | :--- |
 | **Terminology Engine** | `labelme/_medical_terminology.py` | `CHEST_XRAY_PRESET`, `TerminologyItem`, `TerminologyPreset`, `MedicalTerminologyRegistry` | Quản lý bộ nhãn mặc định, bộ nhãn tùy chỉnh, tra cứu tên hiển thị Full/Short theo locale (`en_US` / `vi_VN`), tra cứu màu RGB và phân giải mã chuẩn Tiếng Anh. |
-| **Bảng Label List (Dock phải)** | `UniqueLabelQListWidget` (`_unique_label_qlist_widget.py`) | `preset_combo` (`objectName="preset_combo"`), `category_combo` (`objectName="category_combo"`), `add_label_button` (`objectName="add_label_button"`) | Cho phép chọn Bộ nhãn (Preset), lọc danh sách theo Nhóm giải phẫu, và bấm nút `+` để mở Form thêm nhãn mới. |
-| **Hộp thoại Chọn Nhãn (Popup)** | `LabelDialog` (`_label_dialog.py`) | `category_combo` (`objectName="category_combo"`), `add_label_button` (`objectName="add_label_button"`), `edit`, `edit_group_id`, `label_list` | Lọc theo Nhóm giải phẫu, gõ tìm kiếm lọc trực tiếp theo từ khóa (EN/VI/Aliases), hiển thị tên rút gọn khi lọc Nhóm, trả về `LabelDialogEntry.label` là mã chuẩn Tiếng Anh. |
-| **Form Thêm Nhãn Mới** | `MedicalLabelFormDialog` (`_medical_label_dialog.py`) | `english_label_edit` (`objectName="english_label_edit"`), `vietnamese_label_edit` (`objectName="vietnamese_label_edit"`), `short_english_edit`, `short_vietnamese_edit`, `category_combo` (`objectName="category_combo"`), `color_button`, `error_label` | Kiểm tra hợp lệ: bắt buộc có Mã chuẩn Tiếng Anh (ASCII/English), không trùng lặp, chọn hoặc nhập Nhóm, chọn màu RGB. |
-| **Form Tạo Bộ Nhãn Mới** | `MedicalPresetFormDialog` (`_medical_label_dialog.py`) | `preset_name_edit` (`objectName="preset_name_edit"`), `error_label` | Tạo bộ nhãn (Preset) mới qua Form UI để bác sĩ chuyển đổi giữa các chuyên khoa. |
+| **Bảng Label List (Dock phải)** | `UniqueLabelQListWidget` (`_unique_label_qlist_widget.py`) | `category_combo` (`objectName="category_combo"`, `stretch=1`), `add_label_button` (`objectName="add_label_button"`) | Thanh công cụ tinh gọn gồm 1 ô Dropdown lọc danh sách theo Nhóm giải phẫu (`All` / `Tất cả` và các nhóm) và 1 nút `+` để mở Form thêm nhãn mới (không hiển thị ô chọn Preset). |
+| **Hộp thoại Chọn Nhãn (Popup)** | `LabelDialog` (`_label_dialog.py`) | `category_combo` (`objectName="category_combo"`, `stretch=1`), `add_label_button` (`objectName="add_label_button"`), `edit`, `edit_group_id`, `label_list` | Lọc theo Nhóm giải phẫu, gõ tìm kiếm lọc trực tiếp theo từ khóa (EN/VI/Aliases), hiển thị tên rút gọn khi lọc Nhóm, trả về `LabelDialogEntry.label` là mã chuẩn Tiếng Anh. |
+| **Form Thêm Nhãn Mới** | `MedicalLabelFormDialog` (`_medical_label_dialog.py`) | `english_label_edit` (`objectName="english_label_edit"`), `vietnamese_label_edit` (`objectName="vietnamese_label_edit"`), `short_english_edit`, `short_vietnamese_edit`, `category_combo` (`objectName="category_combo"`), `color_button`, `error_label` | Kiểm tra hợp lệ: bắt buộc có Mã chuẩn Tiếng Anh (ASCII/English), không trùng lặp, chọn hoặc nhập Nhóm mới, chọn màu RGB. |
 
 ### 3.2. Cấu Trúc Lưu Trữ File Kết Quả `.json` (JSON Annotation Contract)
 
@@ -158,16 +157,17 @@ ______________________________________________________________________
 - **Xác minh Hộp xám (Grey-box State):**
   - Trong cả 3 trường hợp, Form **không đóng lại**, `error_label.isVisible() == True`, hiển thị thông báo lỗi rõ ràng và không ghi dữ liệu rác vào Registry hay file cấu hình.
 
-### `TC-08`: Chuyển đổi Bộ nhãn (`Preset Switcher`) & Tạo Bộ nhãn Mới qua Form UI
+### `TC-08`: Thanh công cụ 1 Dropdown Lọc Nhóm (`category_combo`) & Thêm Nhóm Mới qua Form UI
 
 - **Luồng thực thi:**
-  1. Trên `UniqueLabelQListWidget`, kiểm tra `preset_combo` đang chọn `"chest_xray"` (21 nhãn).
-  2. Tạo một bộ nhãn mới qua `MedicalPresetFormDialog` (ví dụ: `"Brain CT"`), thêm nhãn `"Intracranial hemorrhage"` (*Xuất huyết nội sọ*).
-  3. Dùng `preset_combo` chuyển qua lại giữa `"Chest X-Ray"` và `"Brain CT"`.
+  1. Trên `UniqueLabelQListWidget` và `LabelDialog`, kiểm tra thanh công cụ chỉ hiển thị duy nhất 1 ô dropdown `category_combo` và 1 nút `+` (`add_label_button`), không có `preset_combo`.
+  2. Mở `MedicalLabelFormDialog`, thêm nhãn `"Clavicle fracture"` (*Gãy xương đòn*) vào nhóm mới `"Chest wall"`.
+  3. Dùng `category_combo` lọc theo nhóm `"Chest wall"`, sau đó chuyển về `"All"`.
 - **Xác minh Hộp xám (Grey-box State):**
-  - Khi chọn `"Brain CT"`, bảng `Label List` và `LabelDialog` cập nhật sang danh sách nhãn và nhóm của `"Brain CT"`.
+  - `hasattr(unique_list, "preset_combo") == False` và `hasattr(dialog, "preset_combo") == False`.
+  - Khi lọc `"Chest wall"`, chỉ hiển thị nhãn thuộc nhóm `"Chest wall"`.
   - Các hình vẽ (Shapes) của ảnh hiện tại đã vẽ trước đó vẫn giữ nguyên nhãn và không bị mất dữ liệu.
-  - Khi chuyển lại `"Chest X-Ray"`, 21 nhãn phổi và 4 nhóm giải phẫu hiển thị lại đầy đủ.
+  - Khi chuyển lại `"All"`, toàn bộ 22 nhãn hiển thị lại đầy đủ.
 
 ### `TC-09`: Luồng "Chọn nhãn trước ở bảng bên phải -> Khoanh liên tiếp trên phim"
 

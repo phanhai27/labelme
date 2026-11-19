@@ -367,10 +367,6 @@
         <translation>Mô tả</translation>
     </message>
     <message>
-        <source>Select Medical Label Preset</source>
-        <translation>Chọn bộ nhãn y khoa</translation>
-    </message>
-    <message>
         <source>Filter by Anatomical Category</source>
         <translation>Lọc theo nhóm giải phẫu</translation>
     </message>
@@ -1945,10 +1941,6 @@ Vị trí dự kiến: {path}</translation>
 </context>
 <context>
     <name>UniqueLabelQListWidget</name>
-    <message>
-        <source>Select Medical Label Preset</source>
-        <translation>Chọn bộ nhãn y khoa</translation>
-    </message>
     <message>
         <source>Filter by Anatomical Category</source>
         <translation>Lọc theo nhóm giải phẫu</translation>

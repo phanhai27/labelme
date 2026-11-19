@@ -367,10 +367,6 @@
         <translation>説明</translation>
     </message>
     <message>
-        <source>Select Medical Label Preset</source>
-        <translation>Select Medical Label Preset</translation>
-    </message>
-    <message>
         <source>Filter by Anatomical Category</source>
         <translation>Filter by Anatomical Category</translation>
     </message>
@@ -1955,10 +1951,6 @@ Expected location: {path}</source>
 </context>
 <context>
     <name>UniqueLabelQListWidget</name>
-    <message>
-        <source>Select Medical Label Preset</source>
-        <translation>Select Medical Label Preset</translation>
-    </message>
     <message>
         <source>Filter by Anatomical Category</source>
         <translation>Filter by Anatomical Category</translation>

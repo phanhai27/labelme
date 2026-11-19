@@ -16,15 +16,11 @@ from .._label_flags import compile_label_flags
 from .._label_flags import get_default_flags
 from .._medical_terminology import MedicalTerminologyRegistry
 from .._medical_terminology import TerminologyItem
-from .._medical_terminology import TerminologyPreset
 from .._medical_terminology import get_terminology_registry
 from ._label_list_widget import LABEL_COLOR_ROLE
 from ._label_list_widget import ColorSwatchDelegate
-from ._medical_label_dialog import NEW_PRESET_SENTINEL
 from ._medical_label_dialog import CategoryFilterComboBox
 from ._medical_label_dialog import MedicalLabelFormDialog
-from ._medical_label_dialog import MedicalPresetFormDialog
-from ._medical_label_dialog import PresetSelectorComboBox
 
 LabelDialogField = Literal["label", "flags", "group_id", "description"]
 
@@ -105,8 +101,6 @@ class LabelDialog(QtWidgets.QDialog):
     _flags_scroll: QtWidgets.QScrollArea
     _terminology_registry: MedicalTerminologyRegistry
     _on_add_label_requested: Callable[[], object] | None
-    _on_preset_changed: Callable[[str], None] | None
-    _on_new_preset_requested: Callable[[], object] | None
     _selected_canonical_label: str | None
     _is_selecting_from_list: bool
 
@@ -114,7 +108,6 @@ class LabelDialog(QtWidgets.QDialog):
     edit_group_id: QtWidgets.QLineEdit
     edit_description: QtWidgets.QTextEdit
     label_list: QtWidgets.QListWidget
-    preset_combo: PresetSelectorComboBox
     category_combo: CategoryFilterComboBox
     add_label_button: QtWidgets.QToolButton
 
@@ -132,8 +125,6 @@ class LabelDialog(QtWidgets.QDialog):
         label_history: list[str] | None = None,
         terminology_registry: MedicalTerminologyRegistry | None = None,
         on_add_label_requested: Callable[[], object] | None = None,
-        on_preset_changed: Callable[[str], None] | None = None,
-        on_new_preset_requested: Callable[[], object] | None = None,
     ) -> None:
         LABEL_LIST_HEIGHT: Final[int] = 150
 
@@ -148,8 +139,6 @@ class LabelDialog(QtWidgets.QDialog):
             else get_terminology_registry()
         )
         self._on_add_label_requested = on_add_label_requested
-        self._on_preset_changed = on_preset_changed
-        self._on_new_preset_requested = on_new_preset_requested
         self._selected_canonical_label = None
         self._is_selecting_from_list = False
 
@@ -226,11 +215,6 @@ class LabelDialog(QtWidgets.QDialog):
         # Medical terminology navigation controls use ClickFocus so they do not
         # alter the keyboard Tab order between edit, edit_group_id, buttons, and
         # label_list.
-        self.preset_combo = PresetSelectorComboBox(registry=self._terminology_registry)
-        self.preset_combo.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
-        self.preset_combo.setToolTip(self.tr("Select Medical Label Preset"))
-        self.preset_combo.currentIndexChanged.connect(self._handle_preset_combo_changed)
-
         self.category_combo = CategoryFilterComboBox(
             registry=self._terminology_registry
         )
@@ -288,7 +272,6 @@ class LabelDialog(QtWidgets.QDialog):
         terminology_row = QtWidgets.QHBoxLayout()
         terminology_row.setContentsMargins(0, 0, 0, 0)
         terminology_row.setSpacing(4)
-        terminology_row.addWidget(self.preset_combo, stretch=1)
         terminology_row.addWidget(self.category_combo, stretch=1)
         terminology_row.addWidget(self.add_label_button)
         main_layout.addLayout(terminology_row)
@@ -415,28 +398,6 @@ class LabelDialog(QtWidgets.QDialog):
             return item
         return None
 
-    def _handle_preset_combo_changed(self, _index: int, /) -> None:
-        data = self.preset_combo.currentData()
-        if not isinstance(data, str):
-            return
-        if data == NEW_PRESET_SENTINEL:
-            if self._on_new_preset_requested is None:
-                self.open_new_preset_dialog()
-            else:
-                self._on_new_preset_requested()
-            return
-        if data == self._terminology_registry.active_preset_id:
-            return
-        self._terminology_registry.set_active_preset(preset_id=data)
-        self.category_combo.refresh_categories(keep_category_id="all")
-        if self._on_preset_changed is None:
-            self.set_predefined_labels(
-                labels=self._terminology_registry.canonical_labels()
-            )
-        else:
-            self._on_preset_changed(data)
-        self._apply_category_filter()
-
     def _handle_category_combo_changed(self, _index: int, /) -> None:
         self._apply_category_filter()
 
@@ -455,21 +416,6 @@ class LabelDialog(QtWidgets.QDialog):
         dialog.exec()
         return dialog
 
-    def open_new_preset_dialog(self) -> MedicalPresetFormDialog:
-        prev_id = self._terminology_registry.active_preset_id
-        dialog = MedicalPresetFormDialog(
-            registry=self._terminology_registry,
-            on_preset_added=self._on_form_preset_added,
-            parent=self,
-        )
-        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
-            self.preset_combo.refresh_presets()
-            idx = self.preset_combo.findData(prev_id)
-            if idx >= 0:
-                with QtCore.QSignalBlocker(self.preset_combo):
-                    self.preset_combo.setCurrentIndex(idx)
-        return dialog
-
     def _on_form_label_added(self, new_item: TerminologyItem, /) -> None:
         self.category_combo.refresh_categories()
         if self._find_item_by_canonical(label=new_item.canonical_label) is None:
@@ -482,15 +428,6 @@ class LabelDialog(QtWidgets.QDialog):
             )
         )
         self._selected_canonical_label = new_item.canonical_label
-
-    def _on_form_preset_added(self, new_preset: TerminologyPreset, /) -> None:
-        self.preset_combo.refresh_presets()
-        self.category_combo.refresh_categories(keep_category_id="all")
-        if self._on_preset_changed is None:
-            self.set_predefined_labels(labels=new_preset.canonical_labels())
-        else:
-            self._on_preset_changed(new_preset.preset_id)
-        self._apply_category_filter()
 
     def _apply_category_filter(self) -> None:
         cat_id = self.category_combo.active_category_id()
@@ -511,7 +448,6 @@ class LabelDialog(QtWidgets.QDialog):
         self.label_list.viewport().update()
 
     def refresh_locale_display(self) -> None:
-        self.preset_combo.refresh_presets()
         self.category_combo.refresh_categories()
         self._apply_category_filter()
 

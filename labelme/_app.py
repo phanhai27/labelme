@@ -1648,9 +1648,7 @@ class MainWindow(QtWidgets.QMainWindow):
             on_edit_settings_labels=self._edit_settings_labels,
             on_clear_unused=self._clear_unused_unique_labels,
             terminology_registry=self._terminology_registry,
-            on_preset_changed=self._on_medical_preset_changed,
             on_add_label_requested=self._open_add_medical_label_dialog,
-            on_new_preset_requested=self._open_new_medical_preset_dialog,
         )
         unique_label_list.setToolTip(
             self.tr(
@@ -4468,8 +4466,6 @@ class MainWindow(QtWidgets.QMainWindow):
             label_history=label_history,
             terminology_registry=self._terminology_registry,
             on_add_label_requested=self._open_add_medical_label_dialog,
-            on_preset_changed=self._on_medical_preset_changed,
-            on_new_preset_requested=self._open_new_medical_preset_dialog,
         )
 
     def _persist_medical_terminology_config(self) -> None:
@@ -4488,9 +4484,7 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
     def _sync_medical_terminology_widgets(self) -> None:
-        self._docks.unique_label_list.preset_combo.refresh_presets()
         self._docks.unique_label_list.category_combo.refresh_categories()
-        self._label_dialog.preset_combo.refresh_presets()
         self._label_dialog.category_combo.refresh_categories()
         self._apply_predefined_labels()
 
@@ -4508,17 +4502,6 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             self._label_dialog._selected_canonical_label = new_item.canonical_label
 
-    def _on_medical_preset_changed(self, preset_id: str, /) -> None:
-        self._terminology_registry.set_active_preset(preset_id=preset_id)
-        self._persist_medical_terminology_config()
-        self._docks.unique_label_list.preset_combo.refresh_presets()
-        self._docks.unique_label_list.category_combo.refresh_categories(
-            keep_category_id="all"
-        )
-        self._label_dialog.preset_combo.refresh_presets()
-        self._label_dialog.category_combo.refresh_categories(keep_category_id="all")
-        self._apply_predefined_labels()
-
     def _open_add_medical_label_dialog(
         self,
     ) -> _widgets.MedicalLabelFormDialog:
@@ -4528,30 +4511,6 @@ class MainWindow(QtWidgets.QMainWindow):
             parent=self,
         )
         dialog.exec()
-        return dialog
-
-    def _open_new_medical_preset_dialog(
-        self,
-    ) -> _widgets.MedicalPresetFormDialog:
-        prev_id = self._terminology_registry.active_preset_id
-        dialog = _widgets.MedicalPresetFormDialog(
-            registry=self._terminology_registry,
-            on_preset_added=lambda preset: self._on_medical_preset_changed(
-                preset.preset_id
-            ),
-            parent=self,
-        )
-        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
-            self._docks.unique_label_list.preset_combo.refresh_presets()
-            self._label_dialog.preset_combo.refresh_presets()
-            for combo in (
-                self._docks.unique_label_list.preset_combo,
-                self._label_dialog.preset_combo,
-            ):
-                idx = combo.findData(prev_id)
-                if idx >= 0:
-                    with QtCore.QSignalBlocker(combo):
-                        combo.setCurrentIndex(idx)
         return dialog
 
     @override

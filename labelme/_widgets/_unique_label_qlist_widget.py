@@ -15,15 +15,11 @@ from PySide6.QtCore import Qt
 
 from .._medical_terminology import MedicalTerminologyRegistry
 from .._medical_terminology import TerminologyItem
-from .._medical_terminology import TerminologyPreset
 from .._medical_terminology import get_terminology_registry
 from ._label_list_widget import LABEL_COLOR_ROLE
 from ._label_list_widget import ColorSwatchDelegate
-from ._medical_label_dialog import NEW_PRESET_SENTINEL
 from ._medical_label_dialog import CategoryFilterComboBox
 from ._medical_label_dialog import MedicalLabelFormDialog
-from ._medical_label_dialog import MedicalPresetFormDialog
-from ._medical_label_dialog import PresetSelectorComboBox
 
 
 class _EscapableQListWidget(QtWidgets.QListWidget):
@@ -151,11 +147,8 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
     _found_header: QtWidgets.QListWidgetItem
     _clear_unused_button: QtWidgets.QToolButton
     _terminology_registry: MedicalTerminologyRegistry
-    _on_preset_changed: Callable[[str], None] | None
     _on_add_label_requested: Callable[[], object] | None
-    _on_new_preset_requested: Callable[[], object] | None
 
-    preset_combo: PresetSelectorComboBox
     category_combo: CategoryFilterComboBox
     add_label_button: QtWidgets.QPushButton
 
@@ -165,9 +158,7 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         on_edit_settings_labels: Callable[[], None],
         on_clear_unused: Callable[[], None],
         terminology_registry: MedicalTerminologyRegistry | None = None,
-        on_preset_changed: Callable[[str], None] | None = None,
         on_add_label_requested: Callable[[], object] | None = None,
-        on_new_preset_requested: Callable[[], object] | None = None,
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent=parent)
@@ -176,15 +167,9 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
             if terminology_registry is not None
             else get_terminology_registry()
         )
-        self._on_preset_changed = on_preset_changed
         self._on_add_label_requested = on_add_label_requested
-        self._on_new_preset_requested = on_new_preset_requested
 
         self.setItemDelegate(_LabelDelegate(parent=self))
-
-        self.preset_combo = PresetSelectorComboBox(registry=self._terminology_registry)
-        self.preset_combo.setToolTip(self.tr("Select Medical Label Preset"))
-        self.preset_combo.currentIndexChanged.connect(self._handle_preset_combo_changed)
 
         self.category_combo = CategoryFilterComboBox(
             registry=self._terminology_registry
@@ -205,7 +190,6 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         controls_row = QtWidgets.QHBoxLayout()
         controls_row.setContentsMargins(0, 0, 2, 0)
         controls_row.setSpacing(2)
-        controls_row.addWidget(self.preset_combo, stretch=1)
         controls_row.addWidget(self.category_combo, stretch=1)
         controls_row.addWidget(self.add_label_button)
 
@@ -261,34 +245,6 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         self.setItemWidget(item, widget)
         return item
 
-    def _handle_preset_combo_changed(self, _index: int, /) -> None:
-        data = self.preset_combo.currentData()
-        if not isinstance(data, str):
-            return
-        if data == NEW_PRESET_SENTINEL:
-            if self._on_new_preset_requested is None:
-                self.open_new_preset_dialog()
-            else:
-                self._on_new_preset_requested()
-            return
-        if data == self._terminology_registry.active_preset_id:
-            return
-        self._terminology_registry.set_active_preset(preset_id=data)
-        self.category_combo.refresh_categories(keep_category_id="all")
-        if self._on_preset_changed is None:
-            preset = self._terminology_registry.active_preset
-            self.set_settings_labels(
-                labels=preset.canonical_labels(),
-                found_in_annotations=set(self.found_labels()),
-                color=lambda lbl: self._terminology_registry.get_color(
-                    canonical_label=lbl
-                )
-                or (255, 165, 0),
-            )
-        else:
-            self._on_preset_changed(data)
-        self._apply_category_filter()
-
     def _handle_category_combo_changed(self, _index: int, /) -> None:
         self._apply_category_filter()
 
@@ -307,21 +263,6 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         dialog.exec()
         return dialog
 
-    def open_new_preset_dialog(self) -> MedicalPresetFormDialog:
-        prev_id = self._terminology_registry.active_preset_id
-        dialog = MedicalPresetFormDialog(
-            registry=self._terminology_registry,
-            on_preset_added=self._on_form_preset_added,
-            parent=self,
-        )
-        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
-            self.preset_combo.refresh_presets()
-            idx = self.preset_combo.findData(prev_id)
-            if idx >= 0:
-                with QtCore.QSignalBlocker(self.preset_combo):
-                    self.preset_combo.setCurrentIndex(idx)
-        return dialog
-
     def _on_form_label_added(self, new_item: TerminologyItem, /) -> None:
         self.category_combo.refresh_categories()
         if self.find_label_item(label=new_item.canonical_label) is None:
@@ -330,22 +271,6 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
                 color=new_item.color,
                 from_settings=True,
             )
-        self._apply_category_filter()
-
-    def _on_form_preset_added(self, new_preset: TerminologyPreset, /) -> None:
-        self.preset_combo.refresh_presets()
-        self.category_combo.refresh_categories(keep_category_id="all")
-        if self._on_preset_changed is None:
-            self.set_settings_labels(
-                labels=new_preset.canonical_labels(),
-                found_in_annotations=set(self.found_labels()),
-                color=lambda lbl: self._terminology_registry.get_color(
-                    canonical_label=lbl
-                )
-                or (255, 165, 0),
-            )
-        else:
-            self._on_preset_changed(new_preset.preset_id)
         self._apply_category_filter()
 
     def _apply_category_filter(self) -> None:
@@ -366,7 +291,6 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         self.viewport().update()
 
     def refresh_locale_display(self) -> None:
-        self.preset_combo.refresh_presets()
         self.category_combo.refresh_categories()
         self._apply_category_filter()
 

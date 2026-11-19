@@ -23,7 +23,6 @@ from labelme._shape import Shape
 from labelme._widgets import LABEL_COLOR_ROLE
 from labelme._widgets import LabelDialog
 from labelme._widgets import MedicalLabelFormDialog
-from labelme._widgets import MedicalPresetFormDialog
 from labelme._widgets import UniqueLabelQListWidget
 
 
@@ -401,7 +400,7 @@ def test_tc_07_medical_label_form_dialog_validation_errors(
     form.close()
 
 
-def test_tc_08_preset_switcher_and_create_new_preset_via_form_ui(
+def test_tc_08_single_category_dropdown_and_add_new_category_via_form_ui(
     *,
     qtbot: QtBot,
     isolated_home: Path,
@@ -411,11 +410,19 @@ def test_tc_08_preset_switcher_and_create_new_preset_via_form_ui(
     win = MainWindow(config_file=config_file)
     qtbot.addWidget(win)
     unique_list = win._docks.unique_label_list
+    dialog = win._label_dialog
 
-    assert unique_list.preset_combo.currentData() == "chest_xray"
+    # Only category_combo and add_label_button exist on the toolbar (no preset_combo)
+    assert not hasattr(unique_list, "preset_combo")
+    assert not hasattr(dialog, "preset_combo")
+    assert unique_list.category_combo.objectName() == "category_combo"
+    assert unique_list.add_label_button.objectName() == "add_label_button"
+    assert dialog.category_combo.objectName() == "category_combo"
+    assert dialog.add_label_button.objectName() == "add_label_button"
     assert len(unique_list.settings_labels()) == 21
+    assert len(win._terminology_registry.categories()) == 4
 
-    # Add an existing shape on canvas before switching presets
+    # Add an existing shape on canvas before adding a new category and label
     existing_shape = Shape(
         label="Lung opacity",
         shape_type="rectangle",
@@ -423,47 +430,36 @@ def test_tc_08_preset_switcher_and_create_new_preset_via_form_ui(
     )
     win._load_shapes(shapes=[existing_shape], replace=True)
 
-    # Create a new preset "Brain CT" via MedicalPresetFormDialog
-    preset_dialog = MedicalPresetFormDialog(
-        registry=win._terminology_registry,
-        on_preset_added=lambda preset: win._on_medical_preset_changed(preset.preset_id),
-        parent=win,
-    )
-    qtbot.addWidget(preset_dialog)
-    preset_dialog.preset_name_edit.setText("Brain CT")
-    preset_dialog.vietnamese_name_edit.setText("CT Sọ não")
-    preset_dialog.accept()
-
-    assert win._terminology_registry.active_preset_id == "brain_ct"
-    assert unique_list.preset_combo.currentData() == "brain_ct"
-
-    # Add label "Intracranial hemorrhage" to Brain CT
+    # Add a label under a new custom category "Chest wall" via MedicalLabelFormDialog
     label_dialog_form = MedicalLabelFormDialog(
         registry=win._terminology_registry,
         on_label_added=win._on_medical_label_added,
         parent=win,
     )
     qtbot.addWidget(label_dialog_form)
-    label_dialog_form.english_label_edit.setText("Intracranial hemorrhage")
-    label_dialog_form.vietnamese_label_edit.setText("Xuất huyết nội sọ")
-    label_dialog_form.category_combo.setCurrentText("Parenchyma")
+    label_dialog_form.english_label_edit.setText("Clavicle fracture")
+    label_dialog_form.vietnamese_label_edit.setText("Gãy xương đòn")
+    label_dialog_form.short_english_edit.setText("Clavicle fracture")
+    label_dialog_form.short_vietnamese_edit.setText("Xương đòn")
+    label_dialog_form.category_combo.setCurrentText("Chest wall")
     label_dialog_form.accept()
 
-    assert unique_list.settings_labels() == ["Intracranial hemorrhage"]
+    assert len(unique_list.settings_labels()) == 22
+    assert len(win._terminology_registry.categories()) == 5
+
+    # Filter by the newly added category "Chest wall"
+    unique_list.category_combo.setCurrentText("Chest wall")
+    assert [
+        it.data(Qt.ItemDataRole.UserRole) for it in unique_list.visible_label_items()
+    ] == ["Clavicle fracture"]
+
     # Existing shape on canvas is untouched
     assert len(win._canvas_widgets.canvas.shapes) == 1
     assert win._canvas_widgets.canvas.shapes[0].label == "Lung opacity"
 
-    # Switch back to Chest X-Ray
-    unique_list.preset_combo.setCurrentText("Chest X-Ray")
-    assert win._terminology_registry.active_preset_id == "chest_xray"
-    assert len(unique_list.settings_labels()) == 21
-    assert len(win._terminology_registry.categories()) == 4
-
-    # Switch again to Brain CT
-    unique_list.preset_combo.setCurrentText("Brain CT")
-    assert win._terminology_registry.active_preset_id == "brain_ct"
-    assert unique_list.settings_labels() == ["Intracranial hemorrhage"]
+    # Switch back to All
+    unique_list.category_combo.setCurrentText("All")
+    assert len(unique_list.visible_label_items()) == 22
 
     win.close()
 

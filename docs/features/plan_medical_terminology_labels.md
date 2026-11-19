@@ -53,8 +53,8 @@ flowchart TD
 ### Tầng 1 — Giao diện (`UI / Widgets`)
 
 - **\[`labelme/_widgets/_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_dialog.py) (`LabelDialog`)**:
-  - Bổ sung thanh **Chọn Bộ nhãn (`preset_combo`: `QComboBox`)** và nút **`+ Thêm nhãn` (`add_label_button`: `QToolButton`)** ở phía trên.
-  - Bổ sung thanh **Lọc Nhóm giải phẫu (`category_bar` / `category_combo`)** gồm nút `"Tất cả"` (`"All"`) và các nhóm của bộ nhãn hiện tại (*Nhu mô phổi*, *Màng phổi*, *Rốn phổi / trung thất*, *Tim / cơ hoành / khí quản*, cùng nhóm tùy chỉnh nếu có).
+  - Bổ sung thanh công cụ tinh gọn gồm **1 ô Dropdown Lọc Nhóm giải phẫu (`category_combo`: `QComboBox`, `stretch=1`)** và **1 nút `+` (`add_label_button`: `QToolButton`)** ở phía trên (không có ô chọn Preset gây rối mắt).
+  - Ô **Lọc Nhóm giải phẫu (`category_combo`)** gồm `"Tất cả"` (`"All"`) và 4 nhóm giải phẫu chuẩn (*Nhu mô phổi*, *Màng phổi*, *Rốn phổi / trung thất*, *Tim / cơ hoành / khí quản*, cùng các nhóm mới nếu bác sĩ tự thêm).
   - Nâng cấp danh sách `label_list`:
     - Hiển thị ô màu đặc trưng (`LABEL_COLOR_ROLE` với `ColorSwatchDelegate`).
     - Khi chọn `"Tất cả"`: Hiển thị tên đầy đủ theo ngôn ngữ UI.
@@ -62,19 +62,17 @@ flowchart TD
     - Khi bác sĩ gõ vào ô `edit`: Tự động lọc trực tiếp các dòng trong `label_list` theo cả tên Tiếng Anh, Tiếng Việt, tên rút gọn và từ đồng nghĩa (ví dụ gõ `"opacity"`, `"collapse"`, `"deviation"`, `"đám mờ"`, `"nốt"` đều khớp).
     - Lưu mã chuẩn Tiếng Anh (`canonical_label`) trong `Qt.ItemDataRole.UserRole` của từng item; khi bác sĩ chọn hoặc double-click một item, hộp thoại luôn trả về `LabelDialogEntry.label` là **mã chuẩn Tiếng Anh**.
 - **\[`labelme/_widgets/_unique_label_qlist_widget.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_unique_label_qlist_widget.py) (`UniqueLabelQListWidget` - Bảng Label List bên phải)**:
-  - Trên phần đầu của bảng `Label List`, tích hợp thanh công cụ nhỏ gọn:
-    - **Dropdown Chuyển đổi Bộ nhãn (`preset_combo`)**: Chuyển nhanh giữa bộ nhãn **`Chest X-Ray (21)`**, **`Custom / Tùy chỉnh`**, hoặc **`+ Tạo bộ nhãn mới...`**.
-    - **Dropdown Lọc Nhóm (`category_combo`)**: Lọc nhanh theo nhóm giải phẫu ngay trên bảng bên phải (khi lọc theo nhóm cũng hiển thị tên rút gọn, khi để `"Tất cả"` hiển thị tên đầy đủ).
-    - **Nút `+ Thêm nhãn` (`add_label_button`)**: Mở Form UI để bác sĩ tự bổ sung nhãn mới vào bộ nhãn hiện tại.
+  - Trên phần đầu của bảng `Label List`, tích hợp thanh công cụ tinh gọn chỉ gồm 2 phần tử:
+    - **1 ô Dropdown Lọc Nhóm (`category_combo`, `stretch=1`)**: Lọc nhanh theo nhóm giải phẫu ngay trên bảng bên phải (khi lọc theo nhóm hiển thị tên rút gọn, khi để `"Tất cả"` hiển thị tên đầy đủ).
+    - **1 nút `+` (`add_label_button`)**: Mở Form UI (`MedicalLabelFormDialog`) để bác sĩ tự bổ sung nhãn mới vào nhóm đã chọn hoặc nhóm mới.
   - Mỗi dòng nhãn giữ mã chuẩn Tiếng Anh trong `Qt.ItemDataRole.UserRole` và hiển thị chuỗi đã dịch theo ngôn ngữ UI (`DisplayRole`).
-- **File mới `labelme/_widgets/_medical_label_dialog.py` (`MedicalLabelFormDialog` & `MedicalPresetFormDialog`)**:
+- **File mới `labelme/_widgets/_medical_label_dialog.py` (`MedicalLabelFormDialog`)**:
   - Form UI chuyên dụng để bác sĩ **Thêm nhãn mới** với các trường:
     - `english_label_edit` (*Tên chuẩn Tiếng Anh lưu JSON - Bắt buộc*)
     - `vietnamese_label_edit` (*Tên hiển thị Tiếng Việt - Tùy chọn*)
     - `short_english_edit` / `short_vietnamese_edit` (*Tên rút gọn khi lọc trong Nhóm - Tùy chọn*)
     - `category_combo` (*Chọn Nhóm có sẵn hoặc nhập Nhóm mới*)
     - `color_button` (*Chọn màu hiển thị cho nhãn, tự động gợi ý màu chưa trùng*)
-  - Form UI nhỏ gọn để bác sĩ **Tạo Bộ nhãn mới (New Preset)** nếu muốn xây dựng bộ nhãn cho chuyên khoa khác.
 - **\[`labelme/_widgets/_label_list_widget.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_list_widget.py) & \[`labelme/_widgets/_shape_render.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_shape_render.py)**:
   - Hàm `format_shape_label` và bộ vẽ nhãn trên Canvas tra cứu qua `MedicalTerminologyRegistry` để hiển thị tên đầy đủ theo ngôn ngữ UI (Tiếng Việt hoặc Tiếng Anh), trong khi `shape.label` bên dưới vẫn giữ nguyên mã chuẩn Tiếng Anh.
 
