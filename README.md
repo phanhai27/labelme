@@ -17,7 +17,6 @@
   <a href="#installation"><b>Installation</b></a>
   | <a href="#usage"><b>Usage</b></a>
   | <a href="#examples"><b>Examples</b></a>
-  | <a href="https://labelme.io"><b>labelme.io ↗</b></a>
   <!-- | <a href="https://github.com/wkentaro/labelme/discussions"><b>Community</b></a> -->
   <!-- | <a href="https://www.youtube.com/playlist?list=PLI6LvFw0iflh3o33YYnVIfOpaO0hc5Dzw"><b>Youtube FAQ</b></a> -->
 </div>
@@ -30,10 +29,9 @@
 
 ## Description
 
-Labelme is a graphical image annotation tool inspired by <http://labelme.csail.mit.edu>.\
+Labelme is a graphical image annotation tool inspired by http://labelme.csail.mit.edu.
 It is written in Python and uses Qt for its graphical interface.
-
-> Looking for a simple install without Python or Qt? Get the standalone app at **[labelme.io](https://labelme.io)**.
+This fork extends the original tool with medical imaging support (including DICOM).
 
 <img src="examples/instance_segmentation/data_dataset_voc/JPEGImages/2011_000006.jpg" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationClass/2011_000006.png" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationClassVisualization/2011_000006.jpg" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationObject/2011_000006.png" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationObjectVisualization/2011_000006.jpg" width="19%" />\
 <i>VOC dataset example of instance segmentation.</i>
@@ -266,4 +264,4 @@ Run `just` to list commands and their arguments. Common commands are
 
 ## Acknowledgement
 
-This repo is the fork of [mpitid/pylabelme](https://github.com/mpitid/pylabelme).
+This repo is a fork of [wkentaro/labelme](https://github.com/wkentaro/labelme) (originally forked from [mpitid/pylabelme](https://github.com/mpitid/pylabelme)).
