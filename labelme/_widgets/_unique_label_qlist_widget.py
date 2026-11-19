@@ -36,6 +36,18 @@ _UNUSED_ROLE: Final = LABEL_COLOR_ROLE + 1
 
 class _LabelDelegate(ColorSwatchDelegate):
     @override
+    def sizeHint(
+        self,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QtCore.QModelIndex | QtCore.QPersistentModelIndex,
+        /,
+    ) -> QtCore.QSize:
+        size = super().sizeHint(option, index)
+        if option.widget is not None:
+            size.setWidth(0)
+        return size
+
+    @override
     def initStyleOption(
         self,
         option: QtWidgets.QStyleOptionViewItem,
@@ -109,7 +121,7 @@ def _section_header(
     title_label.setFont(font)
 
     outer = QtWidgets.QVBoxLayout(header)
-    outer.setContentsMargins(4, 2, 0, 2)
+    outer.setContentsMargins(4, 2, 4, 2)
     outer.setSpacing(2)
 
     top_row = QtWidgets.QHBoxLayout()
@@ -169,6 +181,7 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         )
         self._on_add_label_requested = on_add_label_requested
 
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setItemDelegate(_LabelDelegate(parent=self))
 
         self.category_combo = CategoryFilterComboBox(
@@ -188,7 +201,7 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         self.add_label_button.clicked.connect(self._handle_add_label_clicked)
 
         controls_row = QtWidgets.QHBoxLayout()
-        controls_row.setContentsMargins(0, 0, 2, 0)
+        controls_row.setContentsMargins(0, 0, 0, 0)
         controls_row.setSpacing(2)
         controls_row.addWidget(self.category_combo, stretch=1)
         controls_row.addWidget(self.add_label_button)
@@ -240,7 +253,8 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         item = QtWidgets.QListWidgetItem()
         item.setFlags(Qt.ItemFlag.NoItemFlags)
         item.setData(Qt.ItemDataRole.AccessibleTextRole, title)
-        item.setSizeHint(widget.sizeHint())
+        hint = widget.sizeHint()
+        item.setSizeHint(QtCore.QSize(0, hint.height()))
         self.addItem(item)
         self.setItemWidget(item, widget)
         return item

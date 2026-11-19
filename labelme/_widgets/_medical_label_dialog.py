@@ -28,6 +28,15 @@ class CategoryFilterComboBox(QtWidgets.QComboBox):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("category_combo")
+        self.setSizeAdjustPolicy(
+            QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.setMinimumContentsLength(6)
+        self.setMinimumWidth(60)
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Fixed,
+        )
         self._registry = (
             registry if registry is not None else get_terminology_registry()
         )
@@ -43,6 +52,20 @@ class CategoryFilterComboBox(QtWidgets.QComboBox):
             return None
         return data
 
+    def _update_popup_minimum_width(self) -> None:
+        view = self.view()
+        if view is None:
+            return
+        POPUP_PADDING: Final[int] = 28
+        col_hint = view.sizeHintForColumn(0)
+        if col_hint > 0:
+            view.setMinimumWidth(max(self.width(), col_hint + POPUP_PADDING))
+
+    @override
+    def showPopup(self) -> None:
+        self._update_popup_minimum_width()
+        super().showPopup()
+
     def refresh_categories(self, *, keep_category_id: str | None = None) -> None:
         current = (
             keep_category_id if keep_category_id is not None else self.currentData()
@@ -55,6 +78,7 @@ class CategoryFilterComboBox(QtWidgets.QComboBox):
                 self.addItem(cat.display_name(locale=locale), cat.category_id)
             idx = self.findData(current) if current else 0
             self.setCurrentIndex(idx if idx >= 0 else 0)
+        self._update_popup_minimum_width()
 
     def resolve_index(self, *, text_or_id: str) -> int:
         cleaned = text_or_id.strip()

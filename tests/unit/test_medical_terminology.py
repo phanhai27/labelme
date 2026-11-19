@@ -513,3 +513,52 @@ def test_tc_10_backward_compatibility_with_explicit_labels_config(
     qtbot.addWidget(win)
     assert win._docks.unique_label_list.labels() == ["cat", "dog"]
     win.close()
+
+
+def test_narrow_dock_keeps_edit_and_add_buttons_inside_viewport(
+    *,
+    qtbot: QtBot,
+) -> None:
+    registry = MedicalTerminologyRegistry()
+    unique_list = UniqueLabelQListWidget(
+        on_edit_settings_labels=lambda: None,
+        on_clear_unused=lambda: None,
+        terminology_registry=registry,
+    )
+    qtbot.addWidget(unique_list)
+    for item in CHEST_XRAY_ITEMS:
+        unique_list.add_label_item(
+            label=item.canonical_label,
+            color=item.color,
+            from_settings=True,
+        )
+
+    unique_list.resize(180, 300)
+    unique_list.show()
+    QtWidgets.QApplication.processEvents()
+
+    header_item = unique_list.item(0)
+    assert header_item is not None
+    header_widget = unique_list.itemWidget(header_item)
+    assert header_widget is not None
+    edit_button = header_widget.findChild(QtWidgets.QToolButton)
+    assert edit_button is not None
+
+    assert unique_list.add_label_button.isVisible() is True
+    assert edit_button.isVisible() is True
+    assert not unique_list.horizontalScrollBar().isVisible()
+    assert header_widget.width() <= unique_list.viewport().width()
+
+    viewport_right = unique_list.viewport().rect().right()
+    add_right = (
+        unique_list.add_label_button.mapTo(
+            unique_list.viewport(), QtCore.QPoint(0, 0)
+        ).x()
+        + unique_list.add_label_button.width()
+    )
+    edit_right = (
+        edit_button.mapTo(unique_list.viewport(), QtCore.QPoint(0, 0)).x()
+        + edit_button.width()
+    )
+    assert add_right <= viewport_right + 1
+    assert edit_right <= viewport_right + 1
