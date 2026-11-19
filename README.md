@@ -56,6 +56,7 @@ This fork extends the original tool with medical imaging support (including DICO
 - [x] AI-assisted point-to-polygon/mask annotation by SAM, EfficientSAM models
 - [x] AI text-to-annotation by YOLO-world, SAM3 models
 - [x] Medical DICOM (`.dcm`, `.dicom`) 16-bit Hounsfield Unit support (`SimpleITK` + `pydicom`), clinical Window/Level (`WL/WW`) presets, Slicer Data Probe (`HU` readout under cursor), and zero-loss JSON annotation storage (`imageData: null`)
+- [x] 3D Slicer-style Medical Terminology Navigator with 21 predefined clinical labels across 4 anatomical categories, locale-aware bilingual UI display (`en_US` / `vi_VN`), context-aware short names within categories, smart keyword/alias search, custom label form dialog (`+`), and 100% canonical English JSON output
 
 **🌏 Available in 21 languages** - English · 日本語 · 한국어 · 简体中文 · 繁體中文 · Deutsch · Ελληνικά · Français · Español · Italiano · Português · Nederlands · Magyar · Русский · ไทย · Tiếng Việt · Türkçe · Українська · Polski · Bahasa Indonesia · فارسی (`LANG=ja_JP.UTF-8 labelme`)
 
@@ -215,6 +216,18 @@ labelme data_annotated/ --labels labels.txt  # specify label list with a file
 | **CT Bone** | **`6`** | `400` | `1800` | Cortical / trabecular bone window |
 | **CT Stroke** | **`7`** | `32` | `8` | High-contrast acute ischemic stroke window |
 | **Invert Monochrome** | **`I`** | *(unchanged)* | *(unchanged)* | Toggle monochrome inversion (`MONOCHROME1` / `MONOCHROME2`) |
+
+#### 6. Medical Terminology Navigator & Anatomical Category Filtering (3D Slicer Style)
+
+Labelme includes a built-in **Medical Terminology Navigator** modeled after 3D Slicer's *Terminologies* module, preloaded with **21 clinical findings** organized into **4 anatomical categories** (`Lung parenchyma`, `Pleura`, `Hilum / Mediastinum`, and `Heart / Diaphragm / Trachea`) with distinct clinical RGB colors:
+
+- **Locale-Aware UI Display (`en_US` / `vi_VN`)**: Automatically displays Vietnamese medical terms when the UI language is set to Vietnamese (`File -> Settings -> Language -> Tiếng Việt`) and English terms when set to English.
+- **Context-Aware Short Names**: When filtering by a specific anatomical category (e.g., `Lung parenchyma` or `Pleura`), redundant anatomical prefixes are shortened (`Lung opacity` -> `Opacity` / `Đám mờ phổi` -> `Đám mờ`; `Pleural effusion` -> `Effusion` / `Tràn dịch màng phổi` -> `Tràn dịch`) for rapid scanning. When viewing `All` categories or inspecting the `Shape List` / `Canvas`, full unambiguous names are shown.
+- **100% Canonical English JSON Output**: Regardless of the active UI language or whether a short category name was clicked, all annotations written to `.json` files (`shapes[*].label`) are stored in **100% Canonical English** (e.g., `"Lung opacity"`, `"Pulmonary nodule"`, `"Pleural calcification"`) for downstream AI training.
+- **Two Rapid Clinical Annotation Workflows**:
+  1. **Draw First -> Double-Click Label**: Draw a lesion on the canvas; in the `Shape Label` popup, filter by Anatomical Category or type any keyword/synonym (English, Vietnamese, or unaccented text such as `"opacity"`, `"collapse"`, `"deviation"`, `"đông đặc"`, `"dong dac"`), then **Double-Click** the row to assign immediately.
+  2. **Pre-Select Label -> Draw Continuously**: Click a label in the right-hand `Label List` dock first (optionally disable *Show label popup on new shape* in Settings), then draw multiple lesions of that finding consecutively. Press `Esc` in the `Label List` dock to clear the pre-selection.
+- **Add Custom Medical Labels (`+`)**: Click the `+` button next to the category dropdown in the `Label List` dock or `Shape Label` popup to add new clinical findings or custom anatomical categories via a validated Form UI (enforcing a non-empty ASCII Canonical English ID for AI JSON export) and persist them automatically to `~/.labelmerc`.
 
 ### Command Line Arguments
 
