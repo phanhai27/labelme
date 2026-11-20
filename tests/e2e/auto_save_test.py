@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import Final
@@ -81,14 +82,13 @@ def test_auto_save_on_shape_move(
     original_center = QPointF(_shape_bounds(shape=canvas.selected_shapes[0]).center())
 
     qtbot.keyPress(canvas, Qt.Key.Key_Right)
-    qtbot.wait(50)
     qtbot.keyRelease(canvas, Qt.Key.Key_Right)
-    qtbot.wait(50)
 
     new_center = _shape_bounds(shape=canvas.selected_shapes[0]).center()
     assert abs((new_center.x() - original_center.x()) - 5.0) < 1.0
 
     qtbot.waitUntil(label_file.exists)
+    qtbot.waitUntil(lambda: not _auto_save_win._save_writer.is_busy)
     assert_labelfile_sanity(str(label_file))
 
     close_or_pause(qtbot=qtbot, widget=_auto_save_win, pause=pause)
@@ -137,10 +137,10 @@ def test_enabling_auto_save_on_dirty_annotation_clears_dirty_state(
     )
 
     qtbot.waitUntil(label_file.exists)
+    qtbot.waitUntil(lambda: not win._save_writer.is_busy)
     with open(label_file) as f:
         saved_labels = [shape["label"] for shape in json.load(f)["shapes"]]
     assert "auto-saved" in saved_labels
-    qtbot.waitUntil(lambda: not win._save_writer.is_busy)
     assert not win._is_changed
     assert not win._actions.save.isEnabled()
     assert not win.windowTitle().endswith("*")
@@ -170,9 +170,7 @@ def test_auto_save_on_undo(
     original_points = [(float(x), float(y)) for x, y in original_shape.points]
 
     qtbot.keyPress(canvas, Qt.Key.Key_Right)
-    qtbot.wait(50)
     qtbot.keyRelease(canvas, Qt.Key.Key_Right)
-    qtbot.wait(50)
     qtbot.waitUntil(label_file.exists)
 
     _auto_save_win.undo_shape_edit()
@@ -279,7 +277,6 @@ def test_failed_auto_save_keeps_annotation_dirty_and_allows_manual_retry(
 
     canvas = _raw_auto_save_win._canvas_widgets.canvas
     _raw_auto_save_win._switch_canvas_mode(edit=True, create_mode=None)
-    qtbot.wait(50)
     select_shape(qtbot=qtbot, canvas=canvas, shape_index=0)
     qtbot.keyPress(canvas, Qt.Key.Key_Right)
     qtbot.keyRelease(canvas, Qt.Key.Key_Right)
@@ -308,13 +305,13 @@ def test_failed_auto_save_keeps_annotation_dirty_and_allows_manual_retry(
     _raw_auto_save_win._status_bar.retry.click()
 
     qtbot.waitUntil(label_file.exists, timeout=3000)
+    qtbot.waitUntil(lambda: not _raw_auto_save_win._save_writer.is_busy)
     assert_labelfile_sanity(str(label_file))
     with open(label_file) as f:
         saved_shapes = json.load(f)["shapes"]
     assert len(saved_shapes) == 1
     assert saved_shapes[0]["label"] == "cat"
     assert saved_shapes[0]["points"] == canvas.shapes[0].points.tolist()
-    qtbot.waitUntil(lambda: not _raw_auto_save_win._save_writer.is_busy)
     assert not _raw_auto_save_win.windowTitle().endswith("*")
     assert not _raw_auto_save_win._actions.save.isEnabled()
 
@@ -367,7 +364,6 @@ def test_failed_auto_save_stays_nonmodal_after_target_changes(
 
     canvas = _raw_auto_save_win._canvas_widgets.canvas
     _raw_auto_save_win._switch_canvas_mode(edit=True, create_mode=None)
-    qtbot.wait(50)
     select_shape(qtbot=qtbot, canvas=canvas, shape_index=0)
     qtbot.keyPress(canvas, Qt.Key.Key_Right)
     qtbot.keyRelease(canvas, Qt.Key.Key_Right)
@@ -376,8 +372,8 @@ def test_failed_auto_save_stays_nonmodal_after_target_changes(
 
     new_output_dir = tmp_path / "new-output"
     new_output_dir.mkdir()
-    _raw_auto_save_win._opened_folder = _raw_auto_save_win._opened_folder._replace(
-        output_dir=new_output_dir
+    _raw_auto_save_win._opened_folder = dataclasses.replace(
+        _raw_auto_save_win._opened_folder, output_dir=new_output_dir
     )
 
     qtbot.keyPress(canvas, Qt.Key.Key_Right)

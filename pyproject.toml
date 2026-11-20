@@ -30,7 +30,7 @@ dependencies = [
   "natsort>=7.1.0",
   "numpy>=1.24",
   "onnxruntime>=1.23.2,<1.29",
-  "osam>=0.11.8,<0.12",
+  "osam>=0.12,<0.13",
   # WebGPU's runtime needs Apple Silicon and macOS 14 (Darwin 23) on Macs.
   "osam[webgpu]; sys_platform != 'darwin' or (platform_machine == 'arm64' and platform_release >= '23.0.0')",
   "pillow>=2.8",
@@ -80,6 +80,7 @@ dev = [
   "towncrier>=24.8",
   "gruff>=0.2.5",
   "packaging>=26.1",
+  "hypothesis>=6.170.15",
 ]
 
 [project.scripts]
@@ -116,6 +117,7 @@ filterwarnings = [
   "error::pytest.PytestUnraisableExceptionWarning",
 ]
 qt_api = "pyside6"
+testpaths = ["tests"]
 markers = [
   "network: mark a test that accesses an external network service.",
   "pixel_snapshot: mark a test that compares rendering against a stored pixel snapshot.",

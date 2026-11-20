@@ -20,8 +20,10 @@ from PySide6.QtCore import QPointF
 from PySide6.QtCore import Qt
 from pytestqt.qtbot import QtBot
 
+from labelme._ai_models import osam_client
 from labelme._automation import AiOutputFormat
 from labelme._automation import InferenceRequest
+from labelme._automation import InferenceResult
 from labelme._automation import OsamWorker
 from labelme._automation import _osam_worker
 from labelme._shape import Shape
@@ -53,6 +55,9 @@ class _SessionClient:
             for name in _SESSIONS
         ]
 
+    def list(self) -> builtins.list[osam.types.ModelInfo]:
+        return osam_client(device="auto").list()
+
     def segment(
         self, *args: object, **kwargs: object
     ) -> builtins.list[osam.types.Annotation]:
@@ -61,11 +66,12 @@ class _SessionClient:
         return _SESSIONS[model].run(image=image, **kwargs).annotations
 
 
-def _run(*, request: InferenceRequest) -> list[osam.types.Annotation]:
+def _run(*, request: InferenceRequest) -> InferenceResult:
     return _osam_worker._run(
         client=cast(osam.Client, _SessionClient()),
         request=request,
         progress=lambda *_: None,
+        cache={},
     )
 
 
@@ -181,14 +187,12 @@ def _set_output_like_tool(*, win: MainWindow, create_mode: str) -> None:
 def _run_text_prompt(
     *,
     win: MainWindow,
-    qtbot: QtBot,
     text: str,
     create_mode: str,
     score_threshold: float,
 ) -> None:
     win._switch_canvas_mode(edit=False, create_mode=create_mode)
     _set_output_like_tool(win=win, create_mode=create_mode)
-    qtbot.wait(50)
 
     win._ai_text._text_input.setText(text)
     win._ai_text._score_spinbox.setValue(score_threshold)
@@ -201,7 +205,6 @@ def _run_text_prompt(
             break
 
     win._submit_ai_prompt()
-    qtbot.wait(100)
 
 
 @pytest.mark.parametrize(
@@ -272,7 +275,6 @@ def test_text_prompt_creates_shapes(
     _install_mock_session(monkeypatch=monkeypatch, response_fn=response_fn)
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text=text,
         create_mode=create_mode,
         score_threshold=0.1,
@@ -390,7 +392,6 @@ def test_nms_deduplicates_existing_shapes(
 
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="person",
         create_mode="rectangle",
         score_threshold=0.1,
@@ -401,7 +402,6 @@ def test_nms_deduplicates_existing_shapes(
 
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="person",
         create_mode="rectangle",
         score_threshold=0.1,
@@ -433,7 +433,6 @@ def test_score_threshold_filters_detections(
 
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="person",
         create_mode="rectangle",
         score_threshold=0.01,
@@ -446,7 +445,6 @@ def test_score_threshold_filters_detections(
 
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="person",
         create_mode="rectangle",
         score_threshold=0.5,
@@ -558,7 +556,6 @@ def test_text_prompt_error_preserves_annotation(
         monkeypatch.setattr("labelme._automation._text_detection.nms_bboxes", _raise)
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="person",
         create_mode="rectangle",
         score_threshold=0.1,
@@ -642,7 +639,6 @@ def test_text_result_waits_for_the_label_dialog(
 def _hold_text_results(
     *,
     win: MainWindow,
-    qtbot: QtBot,
     monkeypatch: pytest.MonkeyPatch,
     create_mode: str,
 ) -> Callable[[], None]:
@@ -664,7 +660,6 @@ def _hold_text_results(
     monkeypatch.setattr(OsamWorker, "submit", submit)
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="person",
         create_mode=create_mode,
         score_threshold=0.1,
@@ -688,7 +683,7 @@ def test_text_result_waits_for_the_draft(
         response_fn=functools.partial(_make_person_response, with_masks=True),
     )
     deliver = _hold_text_results(
-        win=win, qtbot=qtbot, monkeypatch=monkeypatch, create_mode="polygon"
+        win=win, monkeypatch=monkeypatch, create_mode="polygon"
     )
     # Run switched to AI-Find All; the user picks Polygon again and draws.
     win._switch_canvas_mode(edit=False, create_mode="polygon")
@@ -725,7 +720,7 @@ def test_text_result_waits_for_a_drag(
     )
     win._load_shapes(shapes=[box], replace=True)
     deliver = _hold_text_results(
-        win=win, qtbot=qtbot, monkeypatch=monkeypatch, create_mode="rectangle"
+        win=win, monkeypatch=monkeypatch, create_mode="rectangle"
     )
     win._switch_canvas_mode(edit=True, create_mode=None)
 
@@ -770,7 +765,7 @@ def test_text_result_waits_for_a_held_vertex(
     )
     win._load_shapes(shapes=[box], replace=True)
     deliver = _hold_text_results(
-        win=win, qtbot=qtbot, monkeypatch=monkeypatch, create_mode="rectangle"
+        win=win, monkeypatch=monkeypatch, create_mode="rectangle"
     )
     win._switch_canvas_mode(edit=True, create_mode=None)
 
@@ -808,7 +803,7 @@ def test_text_result_keeps_the_selection_editable(
     )
     win._load_shapes(shapes=[box], replace=True)
     deliver = _hold_text_results(
-        win=win, qtbot=qtbot, monkeypatch=monkeypatch, create_mode="rectangle"
+        win=win, monkeypatch=monkeypatch, create_mode="rectangle"
     )
     win._switch_canvas_mode(edit=True, create_mode=None)
     canvas.select_shapes(shapes=[box])
@@ -936,7 +931,6 @@ def test_text_prompt_is_one_concept(
     _install_mock_session(monkeypatch=monkeypatch, response_fn=respond)
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text=" person, sofa ",
         create_mode="rectangle",
         score_threshold=0.1,
@@ -991,7 +985,6 @@ def test_one_dialog_labels_the_whole_batch(
 
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="black dog",
         create_mode="rectangle",
         score_threshold=0.1,
@@ -1053,7 +1046,6 @@ def test_batch_skips_what_shapes_with_its_label_cover(
 
     _run_text_prompt(
         win=win,
-        qtbot=qtbot,
         text="black dog",
         create_mode="rectangle",
         score_threshold=0.1,
@@ -1086,9 +1078,7 @@ def test_empty_batch_asks_for_no_label(
         ),
     )
 
-    _run_text_prompt(
-        win=win, qtbot=qtbot, text="dog", create_mode="rectangle", score_threshold=0.1
-    )
+    _run_text_prompt(win=win, text="dog", create_mode="rectangle", score_threshold=0.1)
 
     assert popups == []
     assert win.statusBar().currentMessage() == "No new 'dog' found"

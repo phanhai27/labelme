@@ -99,14 +99,11 @@ def test_MainWindow_open_dir(
     assert win._docks.file_list.currentRow() == 0
 
     win._open_prev_image()
-    qtbot.wait(100)
     assert Path(win._image_path).name == first_image_name
 
     win._open_next_image()
-    qtbot.wait(100)
     assert Path(win._image_path).name == second_image_name
     win._open_prev_image()
-    qtbot.wait(100)
     assert Path(win._image_path).name == first_image_name
 
     win._open_next_image()
@@ -777,6 +774,31 @@ def test_failed_load_of_dropped_image_preserves_current_session(
     assert win._canvas_widgets.canvas.isEnabled()
     assert win._docks.file_list.currentRow() == 0
     assert str(corrupt_image) in critical_messages[0]
+
+    close_or_pause(qtbot=qtbot, widget=win, pause=pause)
+
+
+def test_dropping_an_image_twice_lists_it_once(
+    *,
+    main_win: MainWinFactory,
+    qtbot: QtBot,
+    data_path: Path,
+    tmp_path: Path,
+    pause: bool,
+) -> None:
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    opened_image = session_dir / "01-opened.jpg"
+    shutil.copyfile(src=data_path / "raw/2011_000003.jpg", dst=opened_image)
+    dropped_image = tmp_path / "dropped.jpg"
+    shutil.copyfile(src=data_path / "raw/2011_000006.jpg", dst=dropped_image)
+    win = main_win(file_or_dir=session_dir)
+    show_window_and_wait_for_imagedata(qtbot=qtbot, win=win)
+
+    win.import_dropped_image_files(image_files=[str(dropped_image)] * 2)
+
+    assert win.image_list == [str(opened_image), str(dropped_image)]
+    assert win._docks.file_list.count() == 2  # noqa: PLR2004
 
     close_or_pause(qtbot=qtbot, widget=win, pause=pause)
 

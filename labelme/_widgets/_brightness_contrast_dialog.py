@@ -63,9 +63,7 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
         self._hu_array = hu_array
         self._default_invert = default_invert
 
-        # Alpha rides along as an untouched band; every other mode collapses
-        # to RGB so one lookup table covers all color channels.
-        self._img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+        self._img = _to_adjustable(img=img)
         self.slider_brightness = QtWidgets.QSlider(Qt.Orientation.Horizontal)
         self.slider_contrast = QtWidgets.QSlider(Qt.Orientation.Horizontal)
 
@@ -358,42 +356,66 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
             self._publish(qimage)
             return
 
-        gain = self.slider_brightness.value() / _NEUTRAL
-        spread = self.slider_contrast.value() / _NEUTRAL
-        identity = list(range(256))
-        alpha_lut = identity if self._img.mode == "RGBA" else []
-        ramp = PIL.Image.frombytes("L", (256, 1), bytes(identity))
-        bright_ramp = PIL.ImageEnhance.Brightness(ramp).enhance(gain)
-        bright_lut = list(bright_ramp.tobytes())
-        bright_img = (
-            self._img if gain == 1.0 else self._img.point(bright_lut * 3 + alpha_lut)
-        )
-
-        if spread == 1.0:
-            img = bright_img
-        else:
-            # Pillow derives the contrast pivot after brightness has clipped
-            # and rounded, so the combined table must use that intermediate.
-            pivot = int(PIL.ImageStat.Stat(bright_img.convert("L")).mean[0] + 0.5)
-            contrast_ramp = PIL.Image.blend(
-                PIL.Image.new("L", ramp.size, pivot), bright_ramp, spread
+        self._publish(
+            _adjust(
+                img=self._img,
+                brightness=self.slider_brightness.value(),
+                contrast=self.slider_contrast.value(),
             )
-            contrast_lut = list(contrast_ramp.tobytes())
-            img = self._img.point(contrast_lut * 3 + alpha_lut)
+        )
 
-        image_format = (
-            QImage.Format.Format_RGBA8888
-            if img.mode == "RGBA"
-            else QImage.Format.Format_RGB888
+
+def adjust_brightness_contrast(
+    *, img: PIL.Image.Image, brightness: int | None, contrast: int | None
+) -> QImage:
+    img = _to_adjustable(img=img)
+    return _adjust(
+        img=img,
+        brightness=_NEUTRAL if brightness is None else brightness,
+        contrast=_NEUTRAL if contrast is None else contrast,
+    )
+
+
+def _to_adjustable(*, img: PIL.Image.Image) -> PIL.Image.Image:
+    # Alpha rides along as an untouched band; every other mode collapses
+    # to RGB so one lookup table covers all color channels.
+    return img.convert("RGBA" if "A" in img.getbands() else "RGB")
+
+
+def _adjust(*, img: PIL.Image.Image, brightness: int, contrast: int) -> QImage:
+    gain = brightness / _NEUTRAL
+    spread = contrast / _NEUTRAL
+    identity = list(range(256))
+    alpha_lut = identity if img.mode == "RGBA" else []
+    ramp = PIL.Image.frombytes("L", (256, 1), bytes(identity))
+    bright_ramp = PIL.ImageEnhance.Brightness(ramp).enhance(gain)
+    bright_lut = list(bright_ramp.tobytes())
+    bright_img = img if gain == 1.0 else img.point(bright_lut * 3 + alpha_lut)
+
+    if spread == 1.0:
+        adjusted = bright_img
+    else:
+        # Pillow derives the contrast pivot after brightness has clipped
+        # and rounded, so the combined table must use that intermediate.
+        pivot = int(PIL.ImageStat.Stat(bright_img.convert("L")).mean[0] + 0.5)
+        contrast_ramp = PIL.Image.blend(
+            PIL.Image.new("L", ramp.size, pivot), bright_ramp, spread
         )
-        qimage = QImage(
-            img.tobytes(),
-            img.width,
-            img.height,
-            img.width * len(img.getbands()),
-            image_format,
-        )
-        self._publish(qimage)
+        contrast_lut = list(contrast_ramp.tobytes())
+        adjusted = img.point(contrast_lut * 3 + alpha_lut)
+
+    image_format = (
+        QImage.Format.Format_RGBA8888
+        if adjusted.mode == "RGBA"
+        else QImage.Format.Format_RGB888
+    )
+    return QImage(
+        adjusted.tobytes(),
+        adjusted.width,
+        adjusted.height,
+        adjusted.width * len(adjusted.getbands()),
+        image_format,
+    )
 
 
 def _as_percent(*, value: int) -> str:
