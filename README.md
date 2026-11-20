@@ -7,10 +7,8 @@
 </h4>
 
 <div align="center">
-  <a href="https://pypi.python.org/pypi/labelme"><img src="https://img.shields.io/pypi/v/labelme.svg"></a>
-  <!-- <a href="https://pypi.org/project/labelme"><img src="https://img.shields.io/pypi/pyversions/labelme.svg"></a> -->
-  <a href="https://github.com/wkentaro/labelme/actions"><img src="https://github.com/wkentaro/labelme/actions/workflows/test.yml/badge.svg?branch=main&event=push"></a>
-  <a href="https://discord.com/invite/uAjxGcJm83"><img src="https://dcbadge.limes.pink/api/server/uAjxGcJm83?style=flat"></a>
+  <a href="https://github.com/phanhai27/labelme/actions"><img src="https://github.com/phanhai27/labelme/actions/workflows/test.yml/badge.svg?branch=main&event=push"></a>
+  <a href="https://github.com/phanhai27/labelme/blob/main/LICENSE"><img src="https://img.shields.io/github/license/phanhai27/labelme.svg"></a>
 </div>
 
 <div align="center">
@@ -64,23 +62,15 @@ This fork extends the original tool with medical imaging support (including DICO
 
 There are 3 options to install labelme:
 
-### Option 1: Using pip
-
-For more detail, check ["Install Labelme using Terminal"](https://www.labelme.io/docs/install-labelme-terminal)
+### Option 1: Using pip from GitHub
 
 ```bash
-pip install labelme
-
-# To install the latest version from GitHub:
-# pip install git+https://github.com/wkentaro/labelme.git
+pip install git+https://github.com/phanhai27/labelme.git
 ```
 
-### Option 2: Using standalone executable (Easiest)
+### Option 2: Using standalone installer (Windows `.exe` & macOS `.dmg`)
 
-If you're willing to invest in the convenience of simple installation without any dependencies (Python, Qt),
-you can download the standalone executable from ["Install Labelme as App"](https://www.labelme.io/docs/install-labelme-app).
-
-It's a one-time payment for lifetime access, and it helps us to maintain this project.
+Download the pre-built standalone installers for Windows (`Labelme-Windows-Setup-x64.exe`) and macOS Apple Silicon (`Labelme-macOS-arm64.dmg`) directly from [GitHub Releases](https://github.com/phanhai27/labelme/releases).
 
 ### Option 3: Linux distribution packages
 
@@ -275,6 +265,9 @@ on Windows, install Git for Windows and make its Bash available on `PATH`.
 Run `just` to list commands and their arguments. Common commands are
 `just setup`, `just lint`, and `just test`.
 
-## Acknowledgement
+## License & Attribution
 
-This repo is a fork of [wkentaro/labelme](https://github.com/wkentaro/labelme) (originally forked from [mpitid/pylabelme](https://github.com/mpitid/pylabelme)).
+This software is distributed under the **[GNU General Public License v3.0 (GPL-3.0-only)](LICENSE)**.
+
+- **Medical DICOM Edition / Fork Maintainer (2026):** [phanhai27](https://github.com/phanhai27) (`phanhai27@gmail.com`) — Modified to add 16-bit Medical DICOM (`SimpleITK` + `pydicom`) Hounsfield Unit windowing, clinical `WL/WW` presets, Slicer Data Probe, zero-loss PII-sanitized JSON annotation storage, 3D Slicer-style Medical Terminology Navigator, canvas ergonomics, and standalone Windows/macOS installers.
+- **Original Author & Upstream Project:** Kentaro Wada ([wkentaro/labelme](https://github.com/wkentaro/labelme), originally forked from [mpitid/pylabelme](https://github.com/mpitid/pylabelme)).

@@ -561,7 +561,10 @@ class MainWindow(QtWidgets.QMainWindow):
             "Probe, and zero-loss JSON annotations."
         )
         version = self.tr("Version: %s") % __version__
-        author = self.tr("Author: %s") % "Kentaro Wada"
+        author = (
+            self.tr("Author: %s")
+            % "phanhai27 <phanhai27@gmail.com> (based on Labelme by Kentaro Wada)"
+        )
         homepage = self.tr("Homepage")
         documentation = self.tr("Documentation")
         troubleshooting = self.tr("Troubleshooting")
@@ -579,13 +582,13 @@ class MainWindow(QtWidgets.QMainWindow):
 <p>{version}</p>
 <p>{author}</p>
 <p>
-    <a href="https://labelme.io">{homepage}</a> |
-    <a href="https://labelme.io/docs">{documentation}</a> |
-    <a href="https://labelme.io/docs/troubleshoot">{troubleshooting}</a>
+    <a href="https://github.com/phanhai27/labelme">{homepage}</a> |
+    <a href="https://github.com/phanhai27/labelme#readme">{documentation}</a> |
+    <a href="https://github.com/phanhai27/labelme/issues">{troubleshooting}</a>
 </p>
 <p>
-    <a href="https://github.com/wkentaro/labelme">GitHub</a> |
-    <a href="https://x.com/labelmeai">Twitter/X</a>
+    <a href="https://github.com/phanhai27/labelme">GitHub</a> |
+    <a href="https://github.com/phanhai27/labelme/blob/main/LICENSE">GNU GPLv3</a>
 </p>
 """,
             ),
@@ -2282,7 +2285,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.mark_clean()
 
     def tutorial(self) -> None:
-        url = "https://github.com/wkentaro/labelme/tree/main/examples/tutorial"  # NOQA
+        url = "https://github.com/phanhai27/labelme/tree/main/examples/tutorial"  # NOQA
         webbrowser.open(url)
 
     def _sync_edit_actions(self) -> None:

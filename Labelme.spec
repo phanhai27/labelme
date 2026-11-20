@@ -17,6 +17,7 @@ sitk_datas, sitk_binaries, sitk_hiddenimports = collect_all("SimpleITK")
 pydicom_datas, pydicom_binaries, pydicom_hiddenimports = collect_all("pydicom")
 
 datas = [
+    ("LICENSE", "."),
     ("labelme/_config/default_config.yaml", "labelme/_config"),
     ("labelme/icons", "labelme/icons"),
     ("labelme/translate", "labelme/translate"),
