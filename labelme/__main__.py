@@ -322,6 +322,50 @@ def _ensure_linux_desktop_integration() -> None:
         QtGui.QGuiApplication.setDesktopFileName(_APP_ID)
 
 
+def _configure_linux_input_method(*, plugins_dir: Path | None = None) -> None:
+    if not sys.platform.startswith("linux"):
+        return
+    with contextlib.suppress(Exception):
+        target_dir = (
+            plugins_dir
+            if plugins_dir is not None
+            else Path(QtCore.__file__).resolve().parent
+            / "Qt"
+            / "plugins"
+            / "platforminputcontexts"
+        )
+        has_fcitx_plugin = False
+        has_ibus_plugin = True
+        if target_dir.is_dir():
+            plugin_names = [p.name.lower() for p in target_dir.glob("*.so")]
+            has_fcitx_plugin = any("fcitx" in name for name in plugin_names)
+            has_ibus_plugin = any("ibus" in name for name in plugin_names)
+
+        qt_im = os.environ.get("QT_IM_MODULE", "").strip().lower()
+        xmodifiers = os.environ.get("XMODIFIERS", "").strip().lower()
+        gtk_im = os.environ.get("GTK_IM_MODULE", "").strip().lower()
+        wants_fcitx = qt_im in ("fcitx", "fcitx5") or (
+            not qt_im and ("fcitx" in xmodifiers or "fcitx" in gtk_im)
+        )
+        if wants_fcitx and not has_fcitx_plugin and has_ibus_plugin:
+            os.environ["QT_IM_MODULE"] = "ibus"
+            os.environ.setdefault("IBUS_USE_PORTAL", "1")
+            return
+
+        if qt_im != "ibus" or "IBUS_USE_PORTAL" in os.environ:
+            return
+        ibus_bus_dir = Path("~/.config/ibus/bus").expanduser()
+        if not ibus_bus_dir.is_dir():
+            return
+        for bus_file in ibus_bus_dir.iterdir():
+            if not bus_file.is_file():
+                continue
+            text = bus_file.read_text(encoding="utf-8", errors="ignore").lower()
+            if "fcitx" in text:
+                os.environ["IBUS_USE_PORTAL"] = "1"
+                break
+
+
 def _create_splash_screen() -> QtWidgets.QSplashScreen:
     width, height = 420, 200
     dpr = 1.0
@@ -583,6 +627,7 @@ def main() -> None:
     )
     _set_windows_app_user_model_id()
     _ensure_linux_desktop_integration()
+    _configure_linux_input_method()
     QtWidgets.QApplication.setApplicationName(__appname__)
     app = QtWidgets.QApplication(sys.argv)
     # Only Windows 11's style looks current: Qt's macOS style draws dated lists

@@ -106,3 +106,22 @@ ______________________________________________________________________
   - Khi UI ở Tiếng Việt: Dropdown lọc nhóm hiển thị `"Thành ngực / Xương"`; khi lọc vào nhóm này, nhãn hiển thị rút gọn là `"Gãy"`; khi xem `"Tất cả"`, nhãn hiển thị `"Gãy xương sườn"`.
   - Khi UI ở Tiếng Anh: Dropdown lọc nhóm hiển thị `"Chest wall / Bones"`; khi lọc vào nhóm này, nhãn hiển thị rút gọn là `"Fracture"`; khi xem `"All"`, nhãn hiển thị `"Rib fracture"`.
   - Trong file `.json` xuất ra cho AI: `shapes[0]["label"]` luôn là `"Rib fracture"`.
+
+### `TC-15`: Tự động kết nối bộ gõ Tiếng Việt Fcitx5 qua IBus Portal trên Linux (`_configure_linux_input_method`)
+
+- **Luồng thực thi:**
+  1. Giả lập môi trường Linux có `QT_IM_MODULE="fcitx"` (hoặc `"fcitx5"`, hoặc `XMODIFIERS="@im=fcitx"`) khi thư mục `platforminputcontexts` của PySide6 chỉ có `libibusplatforminputcontextplugin.so` mà không có `libfcitx5platforminputcontextplugin.so`.
+  2. Gọi hàm `_configure_linux_input_method()` trước khi khởi tạo `QApplication`.
+- **Xác minh Hộp xám (Grey-box State):**
+  - `os.environ["QT_IM_MODULE"]` được tự động chuyển sang `"ibus"` và `os.environ["IBUS_USE_PORTAL"] == "1"` để Qt 6 kết nối trực tiếp vào dịch vụ `org.freedesktop.portal.IBus` của Fcitx5 thay vì rơi về `compose`.
+
+### `TC-16`: Gõ Tiếng Việt có dấu (IME Preedit / Commit, NFC & NFD) và Không bị `InlineCompletion` nuốt chữ trên `LabelDialog.edit` & các ô Localized Input
+
+- **Luồng thực thi:**
+  1. Mở `LabelDialog` với bộ nhãn `chest_xray` ở giao diện Tiếng Việt (`vi_VN`) và `completion="startswith"`, focus vào `dialog.edit`.
+  2. Gõ phím `"D"` hoặc `"T"` hoặc gửi chuỗi sự kiện IME (`QInputMethodEvent` với `preeditString="Đám"`, sau đó commit `"Đám mờ"`).
+  3. Mở `MedicalLabelFormDialog` và `MedicalCategoryFormDialog`, nhập/gửi sự kiện IME Tiếng Việt có dấu (cả dạng dựng sẵn NFC lẫn tổ hợp NFD) vào `vietnamese_label_edit`, `short_vietnamese_edit`, `vietnamese_category_edit`.
+- **Xác minh Hộp xám (Grey-box State):**
+  - Khi gõ `"D"` vào `dialog.edit` đang focus: `InlineCompletion` **không** tự ý biến chữ trong `dialog.edit` thành `"Dày màng phổi"` làm ẩn mất `"Đám mờ phổi"`, `"Đông đặc phổi"`, `"Di lệch khí quản"`; tất cả các nhãn có chứa `"d"` / `"đ"` vẫn hiển thị đầy đủ để người dùng gõ tiếp dấu Tiếng Việt.
+  - Khi đang gõ dở ở trạng thái gạch chân IME (`QInputMethodEvent` với `preeditString="Đám"`): `dialog.visible_labels()` lọc tức thời ra `["Lung opacity"]` (*Đám mờ phổi*) và nút `OK` được bật.
+  - Trên các ô `vietnamese_label_edit`, `short_vietnamese_edit`, `vietnamese_category_edit`: Nhận đầy đủ chuỗi Tiếng Việt có dấu và tự động chuẩn hóa về Unicode `NFC`.

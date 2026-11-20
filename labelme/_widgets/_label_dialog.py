@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import unicodedata
 from collections.abc import Callable
 from collections.abc import Collection
 from typing import Final
@@ -23,6 +24,28 @@ from ._medical_label_dialog import CategoryFilterComboBox
 from ._medical_label_dialog import MedicalLabelFormDialog
 
 LabelDialogField = Literal["label", "flags", "group_id", "description"]
+
+_INACTIVE_COMPLETION_ROLE: Final[int] = int(QtCore.Qt.ItemDataRole.UserRole) + 99
+
+
+class _LabelLineEdit(QtWidgets.QLineEdit):
+    _on_ime_event: Callable[[str], None] | None
+
+    def __init__(
+        self,
+        *,
+        on_ime_event: Callable[[str], None] | None = None,
+        parent: QtWidgets.QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._on_ime_event = on_ime_event
+
+    @override
+    def inputMethodEvent(self, event: QtGui.QInputMethodEvent, /) -> None:
+        preedit = event.preeditString()
+        super().inputMethodEvent(event)
+        if self._on_ime_event is not None:
+            self._on_ime_event(preedit)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -103,6 +126,7 @@ class LabelDialog(QtWidgets.QDialog):
     _on_add_label_requested: Callable[[], object] | None
     _selected_canonical_label: str | None
     _is_selecting_from_list: bool
+    _ime_preedit_text: str
 
     edit: QtWidgets.QLineEdit
     edit_group_id: QtWidgets.QLineEdit
@@ -141,6 +165,7 @@ class LabelDialog(QtWidgets.QDialog):
         self._on_add_label_requested = on_add_label_requested
         self._selected_canonical_label = None
         self._is_selecting_from_list = False
+        self._ime_preedit_text = ""
 
         self._sort_labels = sort_labels
         self._flags_spec = compile_label_flags(label_flags=flags)
@@ -169,7 +194,7 @@ class LabelDialog(QtWidgets.QDialog):
 
         # Build primary focus widgets in strict focus-chain order:
         # edit -> edit_group_id -> _ok_button -> _cancel_button -> label_list
-        self.edit = QtWidgets.QLineEdit()
+        self.edit = _LabelLineEdit(on_ime_event=self._handle_ime_input)
         self.edit.setPlaceholderText(
             self.tr("Enter object label") if text is None else text
         )
@@ -315,6 +340,7 @@ class LabelDialog(QtWidgets.QDialog):
         if self._should_sort_alphabetically():
             self.label_list.sortItems()
 
+        self._sync_completer_role()
         self._refresh_ok_button()
 
     @property
@@ -382,9 +408,21 @@ class LabelDialog(QtWidgets.QDialog):
             for i in range(self.label_list.count())
         )
 
+    def _sync_completer_role(self) -> None:
+        completer = self.edit.completer()
+        if completer is None:
+            return
+        role = (
+            _INACTIVE_COMPLETION_ROLE
+            if self._has_medical_items()
+            else int(QtCore.Qt.ItemDataRole.EditRole)
+        )
+        completer.setCompletionRole(role)
+
     def _add_dialog_label_item(self, *, label: str) -> _DialogTerminologyListWidgetItem:
         item = _DialogTerminologyListWidgetItem(label=label, owner=self)
         self.label_list.addItem(item)
+        self._sync_completer_role()
         return item
 
     def _find_item_by_canonical(
@@ -475,17 +513,36 @@ class LabelDialog(QtWidgets.QDialog):
         else:
             raise ValueError(f"Unknown completion mode: {completion!r}")
 
+    def _handle_ime_input(self, preedit: str, /) -> None:
+        self._ime_preedit_text = unicodedata.normalize("NFC", preedit)
+        effective_text = unicodedata.normalize(
+            "NFC", f"{self.edit.text()}{self._ime_preedit_text}"
+        )
+        self._refresh_ok_button()
+        if "flags" not in self._locked:
+            self._update_flags(text=effective_text)
+        if not self._is_selecting_from_list and self._has_medical_items():
+            self._filter_medical_items_by_search(query=effective_text)
+
     def _on_text_changed(self, text: str, /) -> None:
         # Leading whitespace never belongs to a label, so undo it as it is typed;
         # the re-entrant signal then handles the corrected text.
         if text != text.lstrip():
             self.edit.setText(text.lstrip())
             return
+        normalized = unicodedata.normalize("NFC", text)
+        if text != normalized:
+            pos = self.edit.cursorPosition()
+            with QtCore.QSignalBlocker(self.edit):
+                self.edit.setText(normalized)
+                self.edit.setCursorPosition(min(pos, len(normalized)))
+            text = normalized
+        effective_text = unicodedata.normalize("NFC", f"{text}{self._ime_preedit_text}")
         self._refresh_ok_button()
         if "flags" not in self._locked:
-            self._update_flags(text=text)
+            self._update_flags(text=effective_text)
         if not self._is_selecting_from_list and self._has_medical_items():
-            self._filter_medical_items_by_search(query=text)
+            self._filter_medical_items_by_search(query=effective_text)
 
     def _filter_medical_items_by_search(self, *, query: str) -> None:
         q = query.strip()
@@ -533,12 +590,15 @@ class LabelDialog(QtWidgets.QDialog):
     def _refresh_ok_button(self) -> None:
         # Return only ever reaches an enabled default button, so disabling OK is
         # what keeps a blank label from being submitted.
-        self._ok_button.setEnabled(
-            "label" in self._locked or bool(self.edit.text().strip())
-        )
+        effective = f"{self.edit.text()}{self._ime_preedit_text}".strip()
+        self._ok_button.setEnabled("label" in self._locked or bool(effective))
 
     @override
     def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent, /) -> bool:
+        if watched is self.edit and event.type() == QtCore.QEvent.Type.InputMethod:
+            assert isinstance(event, QtGui.QInputMethodEvent)
+            self._ime_preedit_text = unicodedata.normalize("NFC", event.preeditString())
+            return super().eventFilter(watched, event)
         if watched is not self.edit or event.type() != QtCore.QEvent.Type.KeyPress:
             return super().eventFilter(watched, event)
         assert isinstance(event, QtGui.QKeyEvent)
@@ -578,6 +638,7 @@ class LabelDialog(QtWidgets.QDialog):
         self._selected_canonical_label = (
             canonical if isinstance(canonical, str) else None
         )
+        self._ime_preedit_text = ""
         self._is_selecting_from_list = True
         try:
             self.edit.setText(item.text())
@@ -635,6 +696,7 @@ class LabelDialog(QtWidgets.QDialog):
                 or item.text() == label
             ):
                 self.label_list.takeItem(i)
+        self._sync_completer_role()
 
     def set_predefined_labels(self, *, labels: list[str]) -> None:
         self._predefined_labels = list(labels)
@@ -647,6 +709,7 @@ class LabelDialog(QtWidgets.QDialog):
 
         if self._should_sort_alphabetically():
             self.label_list.sortItems()
+        self._sync_completer_role()
         self._apply_category_filter()
 
     @property
@@ -690,6 +753,7 @@ class LabelDialog(QtWidgets.QDialog):
     ) -> LabelDialogEntry | None:
         self._entry = None
         self._selected_canonical_label = None
+        self._ime_preedit_text = ""
         self._locked = frozenset(locked)
         # Seed from the caller's flags and clear the previous popup's checkboxes
         # before changing the label, so its change signal cannot carry checked
@@ -697,6 +761,7 @@ class LabelDialog(QtWidgets.QDialog):
         self._flag_states = dict(flags or {})
         self._stored_flag_names = tuple(flags or {})
         self._clear_flag_checkboxes()
+        self._sync_completer_role()
         self._apply_category_filter()
 
         # A locked field shows nothing: the caller's value is not shared by the
@@ -778,7 +843,10 @@ class LabelDialog(QtWidgets.QDialog):
     def _capture_entry(self) -> None:
         # The flag checkboxes follow the text, so normalize it before they are
         # collected: "cat " must yield the flags of "cat", not none.
-        raw_text = self.edit.text().strip()
+        raw_text = unicodedata.normalize(
+            "NFC", f"{self.edit.text()}{self._ime_preedit_text}"
+        ).strip()
+        self._ime_preedit_text = ""
         canonical_label = self._resolve_output_label(raw_text=raw_text)
         self._is_selecting_from_list = True
         try:

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
+import unicodedata
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -15,6 +18,7 @@ from pytestqt.qtbot import QtBot
 from labelme import _config
 from labelme import _locale
 from labelme import _yaml
+from labelme.__main__ import _configure_linux_input_method
 from labelme._app import MainWindow
 from labelme._medical_terminology import CHEST_XRAY_ITEMS
 from labelme._medical_terminology import CHEST_XRAY_PRESET
@@ -824,3 +828,105 @@ def test_tc_14_localized_category_display_and_canonical_english_json(
 
     qapp.removeTranslator(vi_translator)
     win.close()
+
+
+def test_tc_15_linux_fcitx5_ime_bridges_to_ibus_portal(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "platform", "linux")
+    plugins_dir = tmp_path / "platforminputcontexts"
+    plugins_dir.mkdir()
+    (plugins_dir / "libibusplatforminputcontextplugin.so").touch()
+    (plugins_dir / "libcomposeplatforminputcontextplugin.so").touch()
+
+    # Case 1: QT_IM_MODULE="fcitx" without libfcitx5platforminputcontextplugin.so
+    monkeypatch.setenv("QT_IM_MODULE", "fcitx")
+    monkeypatch.delenv("IBUS_USE_PORTAL", raising=False)
+    _configure_linux_input_method(plugins_dir=plugins_dir)
+    assert os.environ.get("QT_IM_MODULE") == "ibus"
+    assert os.environ.get("IBUS_USE_PORTAL") == "1"
+
+    # Case 2: QT_IM_MODULE unset, XMODIFIERS="@im=fcitx"
+    monkeypatch.delenv("QT_IM_MODULE", raising=False)
+    monkeypatch.delenv("IBUS_USE_PORTAL", raising=False)
+    monkeypatch.setenv("XMODIFIERS", "@im=fcitx")
+    _configure_linux_input_method(plugins_dir=plugins_dir)
+    assert os.environ.get("QT_IM_MODULE") == "ibus"
+    assert os.environ.get("IBUS_USE_PORTAL") == "1"
+
+
+def test_tc_16_vietnamese_ime_preedit_and_inline_completion_do_not_clobber_typing(
+    *,
+    qtbot: QtBot,
+    qapp: QtWidgets.QApplication,
+    vi_translator: QtCore.QTranslator,
+) -> None:
+    qapp.installTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+
+    registry = MedicalTerminologyRegistry()
+    dialog = LabelDialog(
+        labels=CHEST_XRAY_PRESET.canonical_labels(),
+        completion="startswith",
+        terminology_registry=registry,
+    )
+    qtbot.addWidget(dialog)
+    dialog.show()
+    dialog.edit.setFocus()
+
+    # 1. Typing "D" into focused dialog.edit must NOT be overwritten by InlineCompletion
+    qtbot.keyClicks(dialog.edit, "D")
+    assert dialog.edit.text() == "D"
+    visible = dialog.visible_labels()
+    assert "Lung opacity" in visible
+    assert "Consolidation" in visible
+    assert "Pleural thickening" in visible
+    assert "Tracheal shift" in visible
+
+    # 2. Sending QInputMethodEvent with Vietnamese preedit "Đám" filters immediately
+    dialog.edit.clear()
+    preedit_event = QtGui.QInputMethodEvent("Đám", [])
+    QtWidgets.QApplication.sendEvent(dialog.edit, preedit_event)
+    assert dialog._ok_button.isEnabled()
+    assert dialog.visible_labels() == ["Lung opacity"]
+
+    # Committing "Đám mờ" via QInputMethodEvent
+    commit_event = QtGui.QInputMethodEvent()
+    commit_event.setCommitString("Đám mờ")
+    QtWidgets.QApplication.sendEvent(dialog.edit, commit_event)
+    assert dialog.edit.text() == "Đám mờ"
+    assert dialog.visible_labels() == ["Lung opacity"]
+    dialog._capture_entry()
+    assert dialog._entry is not None
+    assert dialog._entry.label == "Lung opacity"
+
+    # 3. NFD decomposed Vietnamese input is normalized to Unicode NFC
+    cat_dialog = MedicalCategoryFormDialog(registry=registry)
+    qtbot.addWidget(cat_dialog)
+    nfd_cat = unicodedata.normalize("NFD", "Thành ngực / Xương")
+    cat_dialog.english_category_edit.setText("Chest wall / Bones")
+    cat_dialog.vietnamese_category_edit.setText(nfd_cat)
+    assert cat_dialog.vietnamese_category_edit.text() == "Thành ngực / Xương"
+    cat_dialog.accept()
+    assert cat_dialog.created_category is not None
+    assert cat_dialog.created_category.vi_name == "Thành ngực / Xương"
+
+    label_form = MedicalLabelFormDialog(registry=registry)
+    qtbot.addWidget(label_form)
+    nfd_full = unicodedata.normalize("NFD", "Gãy xương sườn")
+    nfd_short = unicodedata.normalize("NFD", "Gãy")
+    label_form.english_label_edit.setText("Rib fracture")
+    label_form.vietnamese_label_edit.setText(nfd_full)
+    label_form.short_english_edit.setText("Fracture")
+    label_form.short_vietnamese_edit.setText(nfd_short)
+    assert label_form.vietnamese_label_edit.text() == "Gãy xương sườn"
+    assert label_form.short_vietnamese_edit.text() == "Gãy"
+    label_form.accept()
+    assert label_form.created_item is not None
+    assert label_form.created_item.vi_full == "Gãy xương sườn"
+    assert label_form.created_item.vi_short == "Gãy"
+
+    qapp.removeTranslator(vi_translator)
+    dialog.close()

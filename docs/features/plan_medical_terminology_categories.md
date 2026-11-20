@@ -86,3 +86,32 @@ flowchart TD
   - Mở rộng cấu trúc `custom_terminologies` trong `~/.labelmerc` để lưu thêm khóa `added_categories` theo từng `preset_id`. Nhờ đó, ngay cả khi bác sĩ mới chỉ tạo nhóm giải phẫu mà chưa thêm nhãn hoặc đóng ứng dụng mở lại, nhóm giải phẫu mới vẫn được bảo toàn đầy đủ cả tên Tiếng Anh lẫn tên Tiếng Việt.
 - **Biên dịch Đa ngôn ngữ (\[`vi_VN.ts`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/translate/vi_VN.ts) & `.qm`)**:
   - Bổ sung context `MedicalCategoryFormDialog` và các chuỗi dịch mới trong `MedicalLabelFormDialog` vào toàn bộ các file `.ts` và biên dịch lại `vi_VN.qm`, đảm bảo `just check_translate` và `just lint` đạt 100%.
+
+______________________________________________________________________
+
+## 3. Khắc phục Triệt để Lỗi Không Gõ Được Tiếng Việt Có Dấu trên Mọi Ô Input (IME & Search Fix)
+
+### 3.1. Chẩn đoán Nguyên nhân Gốc rễ (2 Nguyên nhân Kết hợp)
+
+1. **Nguyên nhân 1 (Tầng Runtime / Hệ thống — Mất kết nối bộ gõ Fcitx5 trên PySide6 Linux/Wayland)**:
+   - Trên máy Linux của người dùng, bộ gõ Tiếng Việt chạy qua tiến trình **`/usr/bin/fcitx5`** với biến môi trường `QT_IM_MODULE=fcitx`.
+   - Tuy nhiên, gói `PySide6` (Qt 6.11.1 trong `.venv`) chỉ đóng gói 3 plugin trong `PySide6/Qt/plugins/platforminputcontexts/`: `libibusplatforminputcontextplugin.so` (`ibus`), `libcomposeplatforminputcontextplugin.so` (`compose`) và `libqtvirtualkeyboardplugin.so`. PySide6 **không có** `libfcitx5platforminputcontextplugin.so`.
+   - Khi `QApplication` khởi động với `QT_IM_MODULE=fcitx`, Qt không tìm thấy plugin `"fcitx"` nên âm thầm rơi về `libcomposeplatforminputcontextplugin.so` (`compose`), làm ngắt hoàn toàn kết nối với bộ gõ Fcitx5 trên **tất cả các ô `QLineEdit` / `QTextEdit` trong toàn bộ ứng dụng** (từ ô search nhãn, ô tìm file đến các ô Localized Display Name).
+   - Ngoài ra, Fcitx5 cung cấp sẵn giao diện tương thích IBus qua D-Bus (`org.freedesktop.portal.IBus`), nhưng trong file socket `~/.config/ibus/bus/...` do Fcitx5 sinh ra lại đính kèm tham số `,fcitx_random_string=...` khiến `QIbusPlatformInputContext` của Qt 6.11 từ chối kết nối nếu không bật `IBUS_USE_PORTAL=1`.
+2. **Nguyên nhân 2 (Tầng Widget \[`LabelDialog.edit`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_dialog.py#L478-L532) — `InlineCompletion` nuốt ký tự đang ghép dấu Tiếng Việt)**:
+   - Trên ô tìm kiếm nhãn `LabelDialog.edit`, khi `QCompleter` chạy ở chế độ `InlineCompletion` (`completion="startswith"`), ngay khi người dùng gõ chữ cái đầu tiên (VD: gõ `"D"` để gõ `"Đám mờ"`, hoặc `"T"` để gõ `"Tràn dịch"`), `QCompleter` lập tức tự động điền và bôi đen phần đuôi của nhãn đầu tiên (`"D[ày màng phổi]"`, `"T[ổn thương dạng kẽ]"`).
+   - Sau đó `_on_text_changed` lấy toàn bộ chuỗi `self.edit.text()` (bao gồm cả phần đuôi tự điền `"ày màng phổi"`) đưa vào `_filter_medical_items_by_search`, khiến các nhãn cần tìm (*Đám mờ phổi*, *Đông đặc phổi*, *Tràn dịch màng phổi*, *Tim to*...) bị ẩn mất ngay lập tức và làm bộ đệm ghép dấu Telex/VNI bị đứt quãng!
+
+### 3.2. Giải pháp Khắc phục Xuyên Tầng
+
+- **Tầng Khởi tạo Ứng dụng (\[`labelme/__main__.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/__main__.py#L286-L324) — `_configure_linux_input_method`)**:
+  - Trước khi khởi tạo `QtWidgets.QApplication(sys.argv)` trên Linux:
+    - Kiểm tra nếu `QT_IM_MODULE` đang là `"fcitx"` hoặc `"fcitx5"` (hoặc `XMODIFIERS` chứa `@im=fcitx`) mà thư mục `platforminputcontexts` của PySide6 không có plugin `fcitx`, tự động chuyển cầu nối sang IBus Portal của Fcitx5 bằng cách thiết lập `QT_IM_MODULE="ibus"` và `IBUS_USE_PORTAL="1"`.
+    - Nếu `QT_IM_MODULE` đang là `"ibus"` và file cấu hình bus trong `~/.config/ibus/bus/` là của Fcitx5 (`fcitx_random_string`), tự động bật `IBUS_USE_PORTAL="1"` để `QIbusPlatformInputContext` kết nối thẳng tới `org.freedesktop.portal.IBus` (`>>>> bus connected!`).
+- **Tầng Widget Tìm kiếm Nhãn (\[`labelme/_widgets/_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_dialog.py#L478-L568))**:
+  - **Không để `InlineCompletion` phá quá trình gõ tìm kiếm bộ nhãn y khoa**:
+    - Trong `_on_text_changed` / `_filter_medical_items_by_search`: Khi lọc danh sách nhãn y khoa (`_has_medical_items()`), nếu `self.edit` đang có phần đuôi gợi ý do `InlineCompletion` tự bôi đen (`selectedText` nằm ở cuối chuỗi khi con trỏ ở cuối), hoặc khi đang gõ tìm kiếm y khoa, chỉ dùng **phần tiền tố thực sự do người dùng gõ** (không lấy phần đuôi do `InlineCompletion` tự động chèn) để lọc `_filter_medical_items_by_search`, hoặc tắt can thiệp `InlineCompletion` trực tiếp lên ô `self.edit` khi đang ở chế độ bộ nhãn y khoa có bộ lọc danh sách riêng (trong khi vẫn giữ `self.edit.completer()` cho các bộ nhãn thường để tương thích ngược 100% với toàn bộ bài test `completion`).
+  - **Hỗ trợ sự kiện `QInputMethodEvent` (Preedit Tiếng Việt)** trên `self.edit`:
+    - Trong `LabelDialog.eventFilter`, lắng nghe `QtCore.QEvent.Type.InputMethod` (`QtGui.QInputMethodEvent`) trên `self.edit` để khi bộ gõ Tiếng Việt đang ở trạng thái gạch chân ghép chữ (`preeditString()`), bộ lọc `_filter_medical_items_by_search` và trạng thái nút `OK` cập nhật tức thời theo chuỗi `text + preeditString()`.
+- **Tầng Chuẩn hóa Unicode (\[`labelme/_medical_terminology.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_medical_terminology.py))**:
+  - Chuẩn hóa `unicodedata.normalize("NFC", ...)` cho tất cả chuỗi Tiếng Việt nhập từ các ô `vietnamese_label_edit`, `short_vietnamese_edit`, `vietnamese_category_edit` và từ khóa tìm kiếm `query` để tương thích tuyệt đối với cả bộ gõ xuất Unicode dựng sẵn (NFC) lẫn tổ hợp (NFD).

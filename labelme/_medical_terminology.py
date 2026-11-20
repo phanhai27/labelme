@@ -10,6 +10,10 @@ from typing import cast
 from PySide6 import QtCore
 
 
+def normalize_nfc(*, text: str) -> str:
+    return unicodedata.normalize("NFC", text).strip()
+
+
 def strip_accents(*, text: str) -> str:
     replaced = text.replace("đ", "d").replace("Đ", "D")
     normalized = unicodedata.normalize("NFD", replaced)
@@ -54,9 +58,9 @@ class TerminologyCategory:
 
     @classmethod
     def from_dict(cls, *, data: dict[str, object]) -> TerminologyCategory:
-        cat_id = str(data.get("category_id") or "").strip()
-        en_name = str(data.get("en_name") or cat_id).strip()
-        vi_name = str(data.get("vi_name") or en_name).strip()
+        cat_id = normalize_nfc(text=str(data.get("category_id") or ""))
+        en_name = normalize_nfc(text=str(data.get("en_name") or cat_id))
+        vi_name = normalize_nfc(text=str(data.get("vi_name") or en_name))
         if not cat_id:
             cat_id = slugify_identifier(text=en_name)
         return cls(category_id=cat_id, en_name=en_name, vi_name=vi_name)
@@ -91,7 +95,7 @@ class TerminologyItem:
         return self.en_full or self.canonical_label
 
     def matches_query(self, *, query: str = "") -> bool:
-        q = query.strip().lower()
+        q = normalize_nfc(text=query).lower()
         if not q:
             return True
         q_ascii = strip_accents(text=q)
@@ -106,33 +110,33 @@ class TerminologyItem:
         for candidate in candidates:
             if not candidate:
                 continue
-            cand_lower = candidate.lower()
+            cand_lower = normalize_nfc(text=candidate).lower()
             if q in cand_lower or q_ascii in strip_accents(text=cand_lower):
                 return True
         return False
 
     def exact_match_score(self, *, query: str = "") -> int:
-        q = query.strip().lower()
+        q = normalize_nfc(text=query).lower()
         if not q:
             return 0
         q_ascii = strip_accents(text=q)
         primary = (
-            self.canonical_label.lower(),
-            self.en_full.lower(),
-            self.vi_full.lower(),
+            normalize_nfc(text=self.canonical_label).lower(),
+            normalize_nfc(text=self.en_full).lower(),
+            normalize_nfc(text=self.vi_full).lower(),
             strip_accents(text=self.vi_full.lower()),
         )
         if q in primary or q_ascii in primary:
             return 3
         secondary = (
-            self.en_short.lower(),
-            self.vi_short.lower(),
+            normalize_nfc(text=self.en_short).lower(),
+            normalize_nfc(text=self.vi_short).lower(),
             strip_accents(text=self.vi_short.lower()),
         )
         if q in secondary or q_ascii in secondary:
             return 2
         for alias in self.aliases:
-            alias_lower = alias.lower()
+            alias_lower = normalize_nfc(text=alias).lower()
             if q == alias_lower or q_ascii == strip_accents(text=alias_lower):
                 return 1
         return 0
@@ -888,7 +892,7 @@ class MedicalTerminologyRegistry:
     ) -> str | None:
         if not category_id_or_name:
             return None
-        cleaned = category_id_or_name.strip()
+        cleaned = normalize_nfc(text=category_id_or_name)
         if cleaned.lower() in (
             "all",
             "tất cả",
@@ -1011,7 +1015,7 @@ class MedicalTerminologyRegistry:
         category_id: str | None = None,
         preset_id: str | None = None,
     ) -> str:
-        cleaned = input_text.strip()
+        cleaned = normalize_nfc(text=input_text)
         if not cleaned:
             return ""
         preset = self.get_preset(preset_id=preset_id) or self.active_preset
@@ -1082,8 +1086,8 @@ class MedicalTerminologyRegistry:
         if not valid:
             raise ValueError(error)
 
-        cleaned_en = en_name.strip()
-        cleaned_vi = vi_name.strip() or cleaned_en
+        cleaned_en = normalize_nfc(text=en_name)
+        cleaned_vi = normalize_nfc(text=vi_name) or cleaned_en
         new_cat = TerminologyCategory(
             category_id=slugify_identifier(text=cleaned_en),
             en_name=cleaned_en,
@@ -1118,12 +1122,12 @@ class MedicalTerminologyRegistry:
         if not valid:
             raise ValueError(error)
 
-        cleaned_en = canonical_label.strip()
-        cleaned_vi = vi_full.strip() or cleaned_en
-        cleaned_en_short = en_short.strip() or cleaned_en
-        cleaned_vi_short = vi_short.strip() or cleaned_vi
+        cleaned_en = normalize_nfc(text=canonical_label)
+        cleaned_vi = normalize_nfc(text=vi_full) or cleaned_en
+        cleaned_en_short = normalize_nfc(text=en_short) or cleaned_en
+        cleaned_vi_short = normalize_nfc(text=vi_short) or cleaned_vi
 
-        cat_input = category_name.strip()
+        cat_input = normalize_nfc(text=category_name)
         matched_cat: TerminologyCategory | None = None
         if cat_input:
             for cat in preset.categories:

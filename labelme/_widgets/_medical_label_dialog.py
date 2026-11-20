@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Callable
 from typing import Final
 from typing import override
@@ -17,6 +18,16 @@ from .._medical_terminology import strip_accents
 
 NEW_CATEGORY_SENTINEL: Final[str] = "__new_category__"
 NEW_PRESET_SENTINEL: Final[str] = "__new_preset__"
+
+
+def _normalize_line_edit_nfc(*, edit: QtWidgets.QLineEdit) -> None:
+    current = edit.text()
+    normalized = unicodedata.normalize("NFC", current)
+    if current != normalized:
+        pos = edit.cursorPosition()
+        with QtCore.QSignalBlocker(edit):
+            edit.setText(normalized)
+            edit.setCursorPosition(min(pos, len(normalized)))
 
 
 class CategoryFilterComboBox(QtWidgets.QComboBox):
@@ -225,6 +236,9 @@ class MedicalCategoryFormDialog(QtWidgets.QDialog):
         self.vietnamese_category_edit.setPlaceholderText(
             self.tr("Display name in local language (Optional)")
         )
+        self.vietnamese_category_edit.textChanged.connect(
+            lambda _t: _normalize_line_edit_nfc(edit=self.vietnamese_category_edit)
+        )
 
         self.error_label = QtWidgets.QLabel()
         self.error_label.setObjectName("error_label")
@@ -416,6 +430,9 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         self.vietnamese_label_edit.setPlaceholderText(
             self.tr("Display name in local language (Optional)")
         )
+        self.vietnamese_label_edit.textChanged.connect(
+            lambda _t: _normalize_line_edit_nfc(edit=self.vietnamese_label_edit)
+        )
 
         self.short_english_edit = QtWidgets.QLineEdit()
         self.short_english_edit.setObjectName("short_english_edit")
@@ -427,6 +444,9 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         self.short_vietnamese_edit.setObjectName("short_vietnamese_edit")
         self.short_vietnamese_edit.setPlaceholderText(
             self.tr("Short localized name in category (Optional)")
+        )
+        self.short_vietnamese_edit.textChanged.connect(
+            lambda _t: _normalize_line_edit_nfc(edit=self.short_vietnamese_edit)
         )
 
         self.category_combo = _LabelFormCategoryComboBox(registry=self._registry)
