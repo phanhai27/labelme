@@ -14,7 +14,9 @@ from ._label_list_widget import LABEL_COLOR_ROLE
 from ._label_list_widget import LabelListWidget
 from ._label_list_widget import LabelListWidgetItem
 from ._label_list_widget import format_shape_label
+from ._medical_label_dialog import NEW_CATEGORY_SENTINEL
 from ._medical_label_dialog import CategoryFilterComboBox
+from ._medical_label_dialog import MedicalCategoryFormDialog
 from ._medical_label_dialog import MedicalLabelFormDialog
 from ._medical_label_dialog import MedicalPresetFormDialog
 from ._medical_label_dialog import PresetSelectorComboBox
@@ -33,6 +35,7 @@ from ._zoom_widget import ZoomWidget
 __all__ = [
     "LABEL_COLOR_ROLE",
     "MIN_ZOOM",
+    "NEW_CATEGORY_SENTINEL",
     "ZOOM_STEP_FACTOR",
     "AiAssistedAnnotationWidget",
     "AiTextToAnnotationWidget",
@@ -49,6 +52,7 @@ __all__ = [
     "LabelDialogField",
     "LabelListWidget",
     "LabelListWidgetItem",
+    "MedicalCategoryFormDialog",
     "MedicalLabelFormDialog",
     "MedicalPresetFormDialog",
     "ModelsDialog",

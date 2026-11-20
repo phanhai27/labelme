@@ -21,7 +21,9 @@ from labelme._medical_terminology import CHEST_XRAY_PRESET
 from labelme._medical_terminology import MedicalTerminologyRegistry
 from labelme._shape import Shape
 from labelme._widgets import LABEL_COLOR_ROLE
+from labelme._widgets import NEW_CATEGORY_SENTINEL
 from labelme._widgets import LabelDialog
+from labelme._widgets import MedicalCategoryFormDialog
 from labelme._widgets import MedicalLabelFormDialog
 from labelme._widgets import UniqueLabelQListWidget
 
@@ -562,3 +564,263 @@ def test_narrow_dock_keeps_edit_and_add_buttons_inside_viewport(
     )
     assert add_right <= viewport_right + 1
     assert edit_right <= viewport_right + 1
+
+
+def test_tc_11_add_anatomical_category_via_button(
+    *,
+    qtbot: QtBot,
+    qapp: QtWidgets.QApplication,
+    vi_translator: QtCore.QTranslator,
+    isolated_home: Path,
+) -> None:
+    config_file = isolated_home / ".labelmerc"
+    config_file.touch()
+    win = MainWindow(config_file=config_file)
+    qtbot.addWidget(win)
+
+    registry = win._terminology_registry
+    assert len(registry.categories()) == 4
+
+    form = MedicalLabelFormDialog(
+        registry=registry,
+        on_label_added=win._on_medical_label_added,
+        on_category_added=win._on_medical_category_added,
+        parent=win,
+    )
+    qtbot.addWidget(form)
+    form.show()
+
+    assert form.add_category_button.objectName() == "add_category_button"
+    assert form.add_category_button.isVisible()
+
+    def fill_and_submit_category_dialog() -> None:
+        cat_modal = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(cat_modal, MedicalCategoryFormDialog)
+        cat_modal.english_category_edit.setText("Chest wall / Bones")
+        cat_modal.vietnamese_category_edit.setText("Thành ngực / Xương")
+        cat_modal.ok_button.click()
+
+    QtCore.QTimer.singleShot(0, fill_and_submit_category_dialog)
+    qtbot.mouseClick(form.add_category_button, Qt.MouseButton.LeftButton)
+
+    categories = registry.categories()
+    assert len(categories) == 5
+    new_cat = categories[-1]
+    assert new_cat.category_id == "chest_wall_bones"
+    assert new_cat.en_name == "Chest wall / Bones"
+    assert new_cat.vi_name == "Thành ngực / Xương"
+
+    assert form.category_combo.currentData() == "chest_wall_bones"
+    assert form.category_combo.currentText() == "Chest wall / Bones"
+
+    qapp.installTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+    assert form.category_combo.currentText() == "Thành ngực / Xương"
+    qapp.removeTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+    assert form.category_combo.currentText() == "Chest wall / Bones"
+
+    persisted = _yaml.safe_load(stream=config_file.read_text(encoding="utf-8"))
+    assert isinstance(persisted, dict)
+    custom_terms = persisted.get("custom_terminologies")
+    assert isinstance(custom_terms, dict)
+    added_cats = custom_terms.get("added_categories")
+    assert isinstance(added_cats, dict)
+    assert "chest_xray" in added_cats
+    assert added_cats["chest_xray"][0]["category_id"] == "chest_wall_bones"
+    assert added_cats["chest_xray"][0]["en_name"] == "Chest wall / Bones"
+    assert added_cats["chest_xray"][0]["vi_name"] == "Thành ngực / Xương"
+
+    form.close()
+    win.close()
+
+    reopened = MainWindow(config_file=config_file)
+    qtbot.addWidget(reopened)
+    reopened_cats = reopened._terminology_registry.categories()
+    assert len(reopened_cats) == 5
+    assert reopened_cats[-1].category_id == "chest_wall_bones"
+    assert reopened_cats[-1].vi_name == "Thành ngực / Xương"
+    reopened.close()
+
+
+def test_tc_12_add_anatomical_category_via_dropdown_sentinel_and_cancel(
+    *,
+    qtbot: QtBot,
+) -> None:
+    registry = MedicalTerminologyRegistry()
+    form = MedicalLabelFormDialog(registry=registry)
+    qtbot.addWidget(form)
+    form.show()
+
+    form.category_combo.setCurrentText("Pleura")
+    assert form.category_combo.currentData() == "pleura"
+
+    sentinel_idx = form.category_combo.findData(NEW_CATEGORY_SENTINEL)
+    assert sentinel_idx >= 0
+
+    def cancel_category_dialog() -> None:
+        cat_modal = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(cat_modal, MedicalCategoryFormDialog)
+        cat_modal.cancel_button.click()
+
+    QtCore.QTimer.singleShot(0, cancel_category_dialog)
+    form.category_combo.setCurrentIndex(sentinel_idx)
+
+    assert len(registry.categories()) == 4
+    assert form.category_combo.currentData() == "pleura"
+
+    def submit_new_category_dialog() -> None:
+        cat_modal = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(cat_modal, MedicalCategoryFormDialog)
+        cat_modal.english_category_edit.setText("Medical devices")
+        cat_modal.vietnamese_category_edit.setText("Thiết bị y tế")
+        cat_modal.ok_button.click()
+
+    QtCore.QTimer.singleShot(0, submit_new_category_dialog)
+    form.category_combo.setCurrentIndex(sentinel_idx)
+
+    assert len(registry.categories()) == 5
+    assert form.category_combo.currentData() == "medical_devices"
+    assert form.category_combo.currentText() == "Medical devices"
+    form.close()
+
+
+def test_tc_13_medical_category_form_dialog_validation_errors(
+    *,
+    qtbot: QtBot,
+) -> None:
+    registry = MedicalTerminologyRegistry()
+    dialog = MedicalCategoryFormDialog(registry=registry)
+    qtbot.addWidget(dialog)
+    dialog.show()
+
+    # Case A: Blank canonical English category
+    dialog.english_category_edit.setText("   ")
+    dialog.ok_button.click()
+    assert dialog.isVisible()
+    assert dialog.error_label.isVisible()
+    assert dialog.error_label.text() != ""
+    assert len(registry.categories()) == 4
+
+    # Case B: Non-ASCII Vietnamese accented characters in Canonical English field
+    dialog.english_category_edit.setText("Thành ngực")
+    dialog.ok_button.click()
+    assert dialog.isVisible()
+    assert dialog.error_label.isVisible()
+    assert (
+        "ASCII" in dialog.error_label.text() or "English" in dialog.error_label.text()
+    )
+    assert len(registry.categories()) == 4
+
+    # Case C: Duplicate existing category (case-insensitive)
+    dialog.english_category_edit.setText("pleura")
+    dialog.ok_button.click()
+    assert dialog.isVisible()
+    assert dialog.error_label.isVisible()
+    assert len(registry.categories()) == 4
+
+    dialog.close()
+
+
+def test_tc_14_localized_category_display_and_canonical_english_json(
+    *,
+    qtbot: QtBot,
+    qapp: QtWidgets.QApplication,
+    vi_translator: QtCore.QTranslator,
+    isolated_home: Path,
+    tmp_path: Path,
+) -> None:
+    qapp.installTranslator(vi_translator)
+    config_file = isolated_home / ".labelmerc"
+    config_file.write_text("auto_save: false\n", encoding="utf-8")
+
+    image_file = tmp_path / "chest_xray_cat.png"
+    qimg = QtGui.QImage(256, 256, QtGui.QImage.Format.Format_RGB32)
+    qimg.fill(QtGui.QColor(0, 0, 0))
+    assert qimg.save(str(image_file))
+
+    win = MainWindow(
+        config_file=config_file,
+        file_or_dir=str(image_file),
+        output_dir=str(tmp_path),
+    )
+    qtbot.addWidget(win)
+    win.show()
+
+    def fill_label_and_category_dialogs() -> None:
+        label_modal = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(label_modal, MedicalLabelFormDialog)
+
+        def fill_category_dialog() -> None:
+            cat_modal = QtWidgets.QApplication.activeModalWidget()
+            assert isinstance(cat_modal, MedicalCategoryFormDialog)
+            cat_modal.english_category_edit.setText("Chest wall / Bones")
+            cat_modal.vietnamese_category_edit.setText("Thành ngực / Xương")
+            cat_modal.ok_button.click()
+
+        QtCore.QTimer.singleShot(0, fill_category_dialog)
+        label_modal.add_category_button.click()
+
+        assert label_modal.category_combo.currentData() == "chest_wall_bones"
+        assert label_modal.category_combo.currentText() == "Thành ngực / Xương"
+
+        label_modal.english_label_edit.setText("Rib fracture")
+        label_modal.vietnamese_label_edit.setText("Gãy xương sườn")
+        label_modal.short_english_edit.setText("Fracture")
+        label_modal.short_vietnamese_edit.setText("Gãy")
+        label_modal.ok_button.click()
+
+    QtCore.QTimer.singleShot(0, fill_label_and_category_dialogs)
+    qtbot.mouseClick(
+        win._docks.unique_label_list.add_label_button,
+        Qt.MouseButton.LeftButton,
+    )
+
+    unique_list = win._docks.unique_label_list
+    dialog = win._label_dialog
+    rib_item = unique_list.find_label_item(label="Rib fracture")
+    assert rib_item is not None
+
+    # In Vietnamese: All mode shows "Gãy xương sườn", filtered shows "Gãy"
+    assert rib_item.text() == "Gãy xương sườn"
+    unique_list.category_combo.setCurrentText("Thành ngực / Xương")
+    assert unique_list.category_combo.currentText() == "Thành ngực / Xương"
+    assert rib_item.text() == "Gãy"
+
+    # Switch to English: category shows "Chest wall / Bones", short shows "Fracture"
+    qapp.removeTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+    assert unique_list.category_combo.currentText() == "Chest wall / Bones"
+    assert rib_item.text() == "Fracture"
+    unique_list.category_combo.setCurrentText("All")
+    assert rib_item.text() == "Rib fracture"
+
+    # Switch back to Vietnamese, pick via LabelDialog and verify Canonical English JSON
+    qapp.installTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+
+    def select_rib_fracture_in_vi() -> None:
+        dialog.category_combo.setCurrentText("Thành ngực / Xương")
+        dlg_rib = dialog._find_item_by_canonical(label="Rib fracture")
+        assert dlg_rib is not None
+        assert dlg_rib.text() == "Gãy"
+        dialog.label_list.itemDoubleClicked.emit(dlg_rib)
+
+    QtCore.QTimer.singleShot(0, select_rib_fracture_in_vi)
+    entry = dialog.popup(move=False)
+    assert entry is not None
+    assert entry.label == "Rib fracture"
+
+    shape = Shape(
+        label=entry.label,
+        shape_type="rectangle",
+        points=np.array([[15.0, 25.0], [110.0, 130.0]], dtype=np.float64),
+    )
+    win._load_shapes(shapes=[shape], replace=True)
+    json_path = tmp_path / "chest_xray_cat.json"
+    assert win.save_labels(label_path=str(json_path))
+    saved_data = json.loads(json_path.read_text(encoding="utf-8"))
+    assert saved_data["shapes"][0]["label"] == "Rib fracture"
+
+    qapp.removeTranslator(vi_translator)
+    win.close()

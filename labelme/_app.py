@@ -4503,12 +4503,19 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             self._label_dialog._selected_canonical_label = new_item.canonical_label
 
+    def _on_medical_category_added(
+        self, _new_cat: _medical_terminology.TerminologyCategory, /
+    ) -> None:
+        self._persist_medical_terminology_config()
+        self._sync_medical_terminology_widgets()
+
     def _open_add_medical_label_dialog(
         self,
     ) -> _widgets.MedicalLabelFormDialog:
         dialog = _widgets.MedicalLabelFormDialog(
             registry=self._terminology_registry,
             on_label_added=self._on_medical_label_added,
+            on_category_added=self._on_medical_category_added,
             parent=self,
         )
         dialog.exec()

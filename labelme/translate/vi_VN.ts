@@ -1416,6 +1416,45 @@ Vị trí dự kiến: {path}</translation>
     </message>
 </context>
 <context>
+    <name>MedicalCategoryFormDialog</name>
+    <message>
+        <source>Canonical English category name is required.</source>
+        <translation>Bắt buộc nhập tên nhóm chuẩn Tiếng Anh.</translation>
+    </message>
+    <message>
+        <source>Canonical English category must use standard English (ASCII) characters without accents. Enter localized names in the Localized Display Name field below.</source>
+        <translation>Tên nhóm chuẩn Tiếng Anh phải dùng ký tự Tiếng Anh (ASCII) không dấu. Vui lòng nhập tên Tiếng Việt vào ô Tên hiển thị bên dưới.</translation>
+    </message>
+    <message>
+        <source>Canonical English category must contain at least one English letter.</source>
+        <translation>Tên nhóm chuẩn Tiếng Anh phải chứa ít nhất một chữ cái tiếng Anh.</translation>
+    </message>
+    <message>
+        <source>Category &apos;{category}&apos; already exists in the current preset.</source>
+        <translation>Nhóm &apos;{category}&apos; đã tồn tại trong bộ nhãn hiện tại.</translation>
+    </message>
+    <message>
+        <source>Add Anatomical Category</source>
+        <translation>Thêm nhóm giải phẫu</translation>
+    </message>
+    <message>
+        <source>e.g. Chest wall / Bones (Canonical English)</source>
+        <translation>VD: Chest wall / Bones (Tiếng Anh chuẩn)</translation>
+    </message>
+    <message>
+        <source>Display name in local language (Optional)</source>
+        <translation>Tên hiển thị theo ngôn ngữ bản địa (Tùy chọn)</translation>
+    </message>
+    <message>
+        <source>Canonical English Category *:</source>
+        <translation>Nhóm chuẩn Tiếng Anh *:</translation>
+    </message>
+    <message>
+        <source>Localized Display Name:</source>
+        <translation>Tên hiển thị bản địa:</translation>
+    </message>
+</context>
+<context>
     <name>MedicalLabelFormDialog</name>
     <message>
         <source>Canonical English label is required for AI JSON storage.</source>
@@ -1432,6 +1471,10 @@ Vị trí dự kiến: {path}</translation>
     <message>
         <source>Label &apos;{label}&apos; already exists in the current preset.</source>
         <translation>Nhãn &apos;{label}&apos; đã tồn tại trong bộ nhãn hiện tại.</translation>
+    </message>
+    <message>
+        <source>+ Add New Category…</source>
+        <translation>+ Thêm nhóm giải phẫu mới…</translation>
     </message>
     <message>
         <source>Add Medical Label</source>
@@ -1452,6 +1495,10 @@ Vị trí dự kiến: {path}</translation>
     <message>
         <source>Short localized name in category (Optional)</source>
         <translation>VD: Gãy (Tên bản địa rút gọn trong nhóm)</translation>
+    </message>
+    <message>
+        <source>Add Anatomical Category</source>
+        <translation>Thêm nhóm giải phẫu</translation>
     </message>
     <message>
         <source>Canonical English Label *:</source>

@@ -411,6 +411,7 @@ class LabelDialog(QtWidgets.QDialog):
         dialog = MedicalLabelFormDialog(
             registry=self._terminology_registry,
             on_label_added=self._on_form_label_added,
+            on_category_added=lambda _cat: self.category_combo.refresh_categories(),
             parent=self,
         )
         dialog.exec()

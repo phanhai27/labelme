@@ -1416,6 +1416,45 @@ Várt hely: {path}</translation>
     </message>
 </context>
 <context>
+    <name>MedicalCategoryFormDialog</name>
+    <message>
+        <source>Canonical English category name is required.</source>
+        <translation>Canonical English category name is required.</translation>
+    </message>
+    <message>
+        <source>Canonical English category must use standard English (ASCII) characters without accents. Enter localized names in the Localized Display Name field below.</source>
+        <translation>Canonical English category must use standard English (ASCII) characters without accents. Enter localized names in the Localized Display Name field below.</translation>
+    </message>
+    <message>
+        <source>Canonical English category must contain at least one English letter.</source>
+        <translation>Canonical English category must contain at least one English letter.</translation>
+    </message>
+    <message>
+        <source>Category &apos;{category}&apos; already exists in the current preset.</source>
+        <translation>Category &apos;{category}&apos; already exists in the current preset.</translation>
+    </message>
+    <message>
+        <source>Add Anatomical Category</source>
+        <translation>Add Anatomical Category</translation>
+    </message>
+    <message>
+        <source>e.g. Chest wall / Bones (Canonical English)</source>
+        <translation>e.g. Chest wall / Bones (Canonical English)</translation>
+    </message>
+    <message>
+        <source>Display name in local language (Optional)</source>
+        <translation>Display name in local language (Optional)</translation>
+    </message>
+    <message>
+        <source>Canonical English Category *:</source>
+        <translation>Canonical English Category *:</translation>
+    </message>
+    <message>
+        <source>Localized Display Name:</source>
+        <translation>Localized Display Name:</translation>
+    </message>
+</context>
+<context>
     <name>MedicalLabelFormDialog</name>
     <message>
         <source>Canonical English label is required for AI JSON storage.</source>
@@ -1432,6 +1471,10 @@ Várt hely: {path}</translation>
     <message>
         <source>Label &apos;{label}&apos; already exists in the current preset.</source>
         <translation>Label &apos;{label}&apos; already exists in the current preset.</translation>
+    </message>
+    <message>
+        <source>+ Add New Category…</source>
+        <translation>+ Add New Category…</translation>
     </message>
     <message>
         <source>Add Medical Label</source>
@@ -1452,6 +1495,10 @@ Várt hely: {path}</translation>
     <message>
         <source>Short localized name in category (Optional)</source>
         <translation>Short localized name in category (Optional)</translation>
+    </message>
+    <message>
+        <source>Add Anatomical Category</source>
+        <translation>Add Anatomical Category</translation>
     </message>
     <message>
         <source>Canonical English Label *:</source>

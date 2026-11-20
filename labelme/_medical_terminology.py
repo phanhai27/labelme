@@ -728,8 +728,67 @@ def validate_canonical_english_label(
     return True, ""
 
 
+def validate_canonical_english_category(
+    *,
+    en_name: str,
+    existing_categories: list[TerminologyCategory]
+    | tuple[TerminologyCategory, ...] = (),
+) -> tuple[bool, str]:
+    MIN_PRINTABLE_ASCII: Final[int] = 32
+
+    cleaned = en_name.strip()
+    if not cleaned:
+        return (
+            False,
+            QtCore.QCoreApplication.translate(
+                "MedicalCategoryFormDialog",
+                "Canonical English category name is required.",
+            ),
+        )
+    if not cleaned.isascii() or any(ord(ch) < MIN_PRINTABLE_ASCII for ch in cleaned):
+        return (
+            False,
+            QtCore.QCoreApplication.translate(
+                "MedicalCategoryFormDialog",
+                "Canonical English category must use standard English (ASCII) "
+                "characters without accents. Enter localized "
+                "names in the Localized Display Name field below.",
+            ),
+        )
+    if not any(ch.isalpha() for ch in cleaned):
+        return (
+            False,
+            QtCore.QCoreApplication.translate(
+                "MedicalCategoryFormDialog",
+                "Canonical English category must contain at least one English letter.",
+            ),
+        )
+    cleaned_lower = cleaned.lower()
+    cleaned_slug = slugify_identifier(text=cleaned)
+    for cat in existing_categories:
+        if (
+            cleaned_lower
+            in (
+                cat.category_id.lower(),
+                cat.en_name.lower(),
+                cat.vi_name.lower(),
+                strip_accents(text=cat.vi_name.lower()),
+            )
+            or cleaned_slug == cat.category_id.lower()
+        ):
+            return (
+                False,
+                QtCore.QCoreApplication.translate(
+                    "MedicalCategoryFormDialog",
+                    "Category '{category}' already exists in the current preset.",
+                ).format(category=cleaned),
+            )
+    return True, ""
+
+
 class MedicalTerminologyRegistry:
     _presets: dict[str, TerminologyPreset]
+    _custom_added_categories: dict[str, list[TerminologyCategory]]
     _custom_added_items: dict[str, list[TerminologyItem]]
     _custom_presets: dict[str, TerminologyPreset]
     _active_preset_id: str
@@ -743,6 +802,7 @@ class MedicalTerminologyRegistry:
         locale: str | None = None,
     ) -> None:
         self._presets = {}
+        self._custom_added_categories = {}
         self._custom_added_items = {}
         self._custom_presets = {}
         self._active_preset_id = "chest_xray"
@@ -763,6 +823,7 @@ class MedicalTerminologyRegistry:
                 items=list(CHEST_XRAY_PRESET.items),
             )
         }
+        self._custom_added_categories = {}
         self._custom_added_items = {}
         self._custom_presets = {}
         self._active_preset_id = CHEST_XRAY_PRESET.preset_id
@@ -1006,6 +1067,37 @@ class MedicalTerminologyRegistry:
             return candidates
         return [item for item in candidates if item.matches_query(query=q)]
 
+    def add_custom_category(
+        self,
+        *,
+        en_name: str,
+        vi_name: str = "",
+        preset_id: str | None = None,
+    ) -> TerminologyCategory:
+        preset = self.get_preset(preset_id=preset_id) or self.active_preset
+        valid, error = validate_canonical_english_category(
+            en_name=en_name,
+            existing_categories=preset.categories,
+        )
+        if not valid:
+            raise ValueError(error)
+
+        cleaned_en = en_name.strip()
+        cleaned_vi = vi_name.strip() or cleaned_en
+        new_cat = TerminologyCategory(
+            category_id=slugify_identifier(text=cleaned_en),
+            en_name=cleaned_en,
+            vi_name=cleaned_vi,
+        )
+        preset.categories.append(new_cat)
+        if preset.preset_id in self._custom_presets:
+            self._custom_presets[preset.preset_id] = preset
+        else:
+            self._custom_added_categories.setdefault(preset.preset_id, []).append(
+                new_cat
+            )
+        return new_cat
+
     def add_custom_label(
         self,
         *,
@@ -1039,6 +1131,8 @@ class MedicalTerminologyRegistry:
                     cat.category_id.lower() == cat_input.lower()
                     or cat.en_name.lower() == cat_input.lower()
                     or cat.vi_name.lower() == cat_input.lower()
+                    or strip_accents(text=cat.vi_name.lower())
+                    == strip_accents(text=cat_input.lower())
                 ):
                     matched_cat = cat
                     break
@@ -1051,6 +1145,10 @@ class MedicalTerminologyRegistry:
                     vi_name=cat_input,
                 )
                 preset.categories.append(matched_cat)
+                if preset.preset_id not in self._custom_presets:
+                    self._custom_added_categories.setdefault(
+                        preset.preset_id, []
+                    ).append(matched_cat)
             elif preset.categories:
                 matched_cat = preset.categories[0]
             else:
@@ -1138,6 +1236,10 @@ class MedicalTerminologyRegistry:
         return new_preset
 
     def to_custom_config(self) -> dict[str, object] | None:
+        added_categories_dict: dict[str, list[dict[str, str]]] = {}
+        for pid, cats in self._custom_added_categories.items():
+            if cats:
+                added_categories_dict[pid] = [c.to_dict() for c in cats]
         added_items_dict: dict[str, list[dict[str, object]]] = {}
         for pid, items in self._custom_added_items.items():
             if items:
@@ -1145,9 +1247,15 @@ class MedicalTerminologyRegistry:
         custom_presets_list: list[dict[str, object]] = [
             p.to_dict() for p in self._custom_presets.values()
         ]
-        if not added_items_dict and not custom_presets_list:
+        if (
+            not added_categories_dict
+            and not added_items_dict
+            and not custom_presets_list
+        ):
             return None
         result: dict[str, object] = {}
+        if added_categories_dict:
+            result["added_categories"] = copy.deepcopy(added_categories_dict)
         if added_items_dict:
             result["added_items"] = copy.deepcopy(added_items_dict)
         if custom_presets_list:
@@ -1169,6 +1277,29 @@ class MedicalTerminologyRegistry:
                 if preset.preset_id and preset.preset_id != "chest_xray":
                     self._presets[preset.preset_id] = preset
                     self._custom_presets[preset.preset_id] = preset
+        raw_added_cats = data_dict.get("added_categories")
+        if isinstance(raw_added_cats, dict):
+            added_cats_dict = cast(dict[object, object], raw_added_cats)
+            for pid, cats_list in added_cats_dict.items():
+                if not isinstance(pid, str) or not isinstance(cats_list, list):
+                    continue
+                target_preset = self._presets.get(pid)
+                if target_preset is None:
+                    continue
+                existing_cats = {
+                    c.category_id.lower() for c in target_preset.categories
+                }
+                for c_data in cats_list:
+                    if not isinstance(c_data, dict):
+                        continue
+                    cat = TerminologyCategory.from_dict(
+                        data=cast(dict[str, object], c_data)
+                    )
+                    if not cat.category_id or cat.category_id.lower() in existing_cats:
+                        continue
+                    target_preset.categories.append(cat)
+                    existing_cats.add(cat.category_id.lower())
+                    self._custom_added_categories.setdefault(pid, []).append(cat)
         raw_added = data_dict.get("added_items")
         if not isinstance(raw_added, dict):
             return
@@ -1191,13 +1322,12 @@ class MedicalTerminologyRegistry:
                 ):
                     continue
                 if item.category_id not in existing_cats:
-                    target_preset.categories.append(
-                        TerminologyCategory(
-                            category_id=item.category_id,
-                            en_name=item.category_en,
-                            vi_name=item.category_vi,
-                        )
+                    new_cat = TerminologyCategory(
+                        category_id=item.category_id,
+                        en_name=item.category_en,
+                        vi_name=item.category_vi,
                     )
+                    target_preset.categories.append(new_cat)
                     existing_cats.add(item.category_id)
                 target_preset.items.append(item)
                 existing_labels.add(item.canonical_label.lower())
