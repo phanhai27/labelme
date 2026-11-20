@@ -1,273 +1,237 @@
 <h1 align="center">
-  <img src="labelme/icons/icon-256.png" width="200" height="200"><br/>labelme
+  <img src="labelme/icons/icon-256.png" width="180" height="180"><br/>Labelme — Medical DICOM & AI Edition
 </h1>
 
 <h4 align="center">
-  Image annotation with Python.
+  Medical DICOM (<code>.dcm</code>) & AI-Assisted 2D Image Annotation with Python (3D Slicer Ergonomics + SAM).
 </h4>
 
 <div align="center">
   <a href="https://github.com/phanhai27/labelme/actions"><img src="https://github.com/phanhai27/labelme/actions/workflows/test.yml/badge.svg?branch=main&event=push"></a>
+  <a href="https://github.com/phanhai27/labelme/releases"><img src="https://img.shields.io/github/v/release/phanhai27/labelme?include_prereleases&label=release"></a>
   <a href="https://github.com/phanhai27/labelme/blob/main/LICENSE"><img src="https://img.shields.io/github/license/phanhai27/labelme.svg"></a>
 </div>
 
 <div align="center">
-  <a href="#installation"><b>Installation</b></a>
-  | <a href="#usage"><b>Usage</b></a>
-  | <a href="#examples"><b>Examples</b></a>
-  <!-- | <a href="https://github.com/wkentaro/labelme/discussions"><b>Community</b></a> -->
-  <!-- | <a href="https://www.youtube.com/playlist?list=PLI6LvFw0iflh3o33YYnVIfOpaO0hc5Dzw"><b>Youtube FAQ</b></a> -->
+  <a href="#medical--clinical-highlights"><b>Medical Highlights</b></a>
+  | <a href="#installation"><b>Installation</b></a>
+  | <a href="#clinical-workflows--shortcuts"><b>Clinical Workflows & Shortcuts</b></a>
+  | <a href="#medical-terminology-navigator-3d-slicer-style"><b>Terminology Navigator</b></a>
+  | <a href="#dicom-json-schema--pii-safety"><b>DICOM JSON Schema</b></a>
 </div>
 
 <br/>
 
-<div align="center">
-  <img src="examples/instance_segmentation/.readme/annotation.jpg" width="70%">
-</div>
+## Overview
 
-## Description
+**Labelme (Medical DICOM & AI Edition)** is a specialized medical imaging and clinical annotation platform built on top of [Labelme](https://github.com/wkentaro/labelme) (Python + Qt6/PySide6).
 
-Labelme is a graphical image annotation tool inspired by http://labelme.csail.mit.edu.
-It is written in Python and uses Qt for its graphical interface.
-This fork extends the original tool with medical imaging support (including DICOM).
+While retaining full compatibility with standard 2D computer vision datasets (PNG, JPEG, TIFF, JPEG 2000, VOC/COCO export, and Segment Anything / SAM 3 AI-assisted segmentation), this edition is purpose-built for **radiologists, clinical annotators, and medical AI engineers** working with **DICOM (`.dcm`, `.dicom`)** modalities (CT, Chest X-Ray / CR / DX, MRI, Ultrasound).
 
-<img src="examples/instance_segmentation/data_dataset_voc/JPEGImages/2011_000006.jpg" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationClass/2011_000006.png" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationClassVisualization/2011_000006.jpg" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationObject/2011_000006.png" width="19%" /> <img src="examples/instance_segmentation/data_dataset_voc/SegmentationObjectVisualization/2011_000006.jpg" width="19%" />\
-<i>VOC dataset example of instance segmentation.</i>
+______________________________________________________________________
 
-<img src="examples/semantic_segmentation/.readme/annotation.jpg" width="30%" /> <img src="examples/bbox_detection/.readme/annotation.jpg" width="30%" /> <img src="examples/classification/.readme/annotation_cat.jpg" width="35%" />\
-<i>Other examples (semantic segmentation, bbox detection, and classification).</i>
+## Medical & Clinical Highlights
 
-<img src="https://user-images.githubusercontent.com/4310419/47907116-85667800-de82-11e8-83d0-b9f4eb33268f.gif" width="30%" /> <img src="https://user-images.githubusercontent.com/4310419/47922172-57972880-deae-11e8-84f8-e4324a7c856a.gif" width="30%" /> <img src="https://user-images.githubusercontent.com/14256482/46932075-92145f00-d080-11e8-8d09-2162070ae57c.png" width="32%" />\
-<i>Various primitives (polygon, rectangle, circle, line, and point).</i>
+- **Native 16-bit DICOM & Hounsfield Units (`HU`) Engine (`SimpleITK` + `pydicom`)**:
+  - Directly decodes 16-bit raw DICOM pixel data with Modality LUT (`RescaleSlope` / `RescaleIntercept`) into 32-bit float Hounsfield Units (`HU`), supporting compressed transfer syntaxes (JPEG 2000, RLE, lossless JPEG) and automatic `MONOCHROME1` inversion.
+  - **Live Slicer Data Probe**: Displays real-time physical pixel intensity (`HU: <val>` for CT or `Val: <val>`) next to cursor coordinates `(x, y)` in the status bar.
+- **3D Slicer Window/Level (`WL/WW`) Presets & PACS Canvas Ergonomics**:
+  - **Interactive Right-Click `WL/WW` Drag**: Adjust Window Center (`WL`, vertical drag) and Window Width (`WW`, horizontal drag) in real time directly on the canvas.
+  - **One-Key Clinical Presets (`1`–`7` & `I`)**: Instant switching between `Auto Window (Header / P1–P99)`, `CT Brain`, `CT Lung`, `CT Soft Tissue`, `CT Liver`, `CT Bone`, `CT Stroke`, and `Invert Monochrome`.
+  - **Hand Pan Tool (`H` / Hold `Space`) with 50% Edge Over-Pan**: Pan smoothly even while mid-drawing a polygon or AI segmentation without losing your active vertices, with 50% viewport over-pan to bring peripheral/subpleural lesions to the center of the screen.
+- **3D Slicer-Style Medical Terminology Navigator (Full CRUD for Categories & Labels)**:
+  - Organized by **Anatomical Categories (Groups)** and **Clinical Findings (Labels)** with distinct 3D Slicer / SNOMED-CT clinical RGB colors (preloaded with 21 chest radiograph/CT findings across 4 anatomical categories: *Lung parenchyma*, *Pleura*, *Hilum / Mediastinum*, and *Heart / Diaphragm / Trachea*).
+  - **Full CRUD Management**: Add (`+`), Edit (pencil icon or context menu), and Delete (trash icon with confirmation) both custom **Anatomical Categories** and **Medical Labels**, automatically persisted to `~/.labelmerc`.
+  - **Multilingual UI with 100% Canonical English JSON Output**: Displays category and finding names in the active UI language (e.g., Vietnamese, English, Japanese, etc., with seamless Linux `Fcitx5`/`IBus` IME input support) and context-aware short names inside a selected category, while always saving **100% Canonical English** labels (`shapes[*].label`) in `.json` files for standardized AI training.
+- **Zero-Loss & PII-Free JSON Storage**:
+  - Saves DICOM annotations with `imageData: null` (avoiding redundant base64 bloat and preserving original 16-bit `.dcm` fidelity) and stores only a strict **PII-free allowlist** of spatial and radiometric metadata (`uids`, `geometry`, `radiometry`, `viewState`) under `otherData["dicom"]`. Never exports `PatientName`, `PatientID`, `PatientBirthDate`, or `InstitutionName`.
+- **AI-Assisted Segmentation (`SAM`, `EfficientSAM`, `SAM 3`, `YOLO-World`)**:
+  - Interactive point/box-to-polygon and text-prompted lesion segmentation running on the currently windowed clinical view.
 
-<img src="https://github.com/user-attachments/assets/53bf09db-b097-48b7-9f32-ab490da5ac53" width="32%" />
-<p><i>Multi-language support (English, 中文, 日本語, 한국어, Deutsch, Français, and more).</i></p>
+**🌏 Available in 21 languages** — English · Tiếng Việt · 日本語 · 한국어 · 简体中文 · 繁體中文 · Deutsch · Ελληνικά · Français · Español · Italiano · Português · Nederlands · Magyar · Русский · ไทย · Türkçe · Українська · Polski · Bahasa Indonesia · فارسی
 
-## Features
-
-- [x] Image annotation for polygon, rectangle, circle, line and point ([tutorial](examples/tutorial))
-- [x] Image flag annotation for classification and cleaning ([#166](https://github.com/wkentaro/labelme/pull/166))
-- [x] Video annotation ([video annotation](examples/video_annotation))
-- [x] GUI customization (predefined labels / flags, auto-saving, label validation, etc) ([#144](https://github.com/wkentaro/labelme/pull/144))
-- [x] Exporting VOC-format dataset for [semantic segmentation](examples/semantic_segmentation), [instance segmentation](examples/instance_segmentation)
-- [x] Exporting COCO-format dataset for [instance segmentation](examples/instance_segmentation)
-- [x] AI-assisted point-to-polygon/mask annotation by SAM, EfficientSAM models
-- [x] AI text-to-annotation by YOLO-world, SAM3 models
-- [x] Medical DICOM (`.dcm`, `.dicom`) 16-bit Hounsfield Unit support (`SimpleITK` + `pydicom`), clinical Window/Level (`WL/WW`) presets, Slicer Data Probe (`HU` readout under cursor), and zero-loss JSON annotation storage (`imageData: null`)
-- [x] 3D Slicer-style Medical Terminology Navigator with 21 predefined clinical labels across 4 anatomical categories, locale-aware UI display, context-aware short names within categories, smart keyword/alias search, custom label form dialog (`+`), and 100% canonical English JSON output
-
-**🌏 Available in 21 languages** - English · 日本語 · 한국어 · 简体中文 · 繁體中文 · Deutsch · Ελληνικά · Français · Español · Italiano · Português · Nederlands · Magyar · Русский · ไทย · Tiếng Việt · Türkçe · Українська · Polski · Bahasa Indonesia · فارسی (`LANG=ja_JP.UTF-8 labelme`)
+______________________________________________________________________
 
 ## Installation
 
-There are 3 options to install labelme:
+### Option 1: Standalone Desktop Installers (Recommended for Clinicians & Annotators)
 
-### Option 1: Using pip from GitHub
+No Python environment required. Download the pre-built standalone installer for your operating system from [**GitHub Releases**](https://github.com/phanhai27/labelme/releases):
+
+- **Windows (64-bit):** `Labelme-Windows-Setup-x64.exe`
+- **macOS (Apple Silicon M1/M2/M3/M4):** `Labelme-macOS-arm64.dmg`
+
+### Option 2: Install from GitHub via `pip` / `uv` (For Medical AI Engineers)
+
+Requires **Python 3.12 – 3.14** on 64-bit Linux, macOS, or Windows:
 
 ```bash
 pip install git+https://github.com/phanhai27/labelme.git
 ```
 
-### Option 2: Using standalone installer (Windows `.exe` & macOS `.dmg`)
-
-Download the pre-built standalone installers for Windows (`Labelme-Windows-Setup-x64.exe`) and macOS Apple Silicon (`Labelme-macOS-arm64.dmg`) directly from [GitHub Releases](https://github.com/phanhai27/labelme/releases).
-
-### Option 3: Linux distribution packages
-
-On some Linux distributions, labelme is also packaged in the system's native repository and can be installed with the distribution's standard package tooling. The badge below tracks which distributions currently ship labelme and which version each one provides:
-
-[![Packaging status](https://repology.org/badge/vertical-allrepos/labelme.svg)](https://repology.org/project/labelme/versions)
-
-### Supported Python and platforms
-
-| | Supported (v7.x) | Maintenance (v6.3.x) |
-| ------ | ------------------------------ | -------------------- |
-| Python | 3.12 - 3.14 | 3.10 - 3.11 |
-| Qt | Qt6 (PySide6) | Qt5 |
-| OS | 64-bit macOS / Windows / Linux | older OSes |
-
-labelme follows [SPEC 0](https://scientific-python.org/specs/spec-0000/) (the successor to [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html)) for dropping Python versions, in step with its core scientific dependencies (numpy, scipy, scikit-image). v6.3.x is the maintenance line for Qt5 and Python 3.10 / 3.11 stragglers.
-
-v6.3.x receives critical fixes only, on a best-effort basis with no release cadence or SLA. "Critical" is limited to:
-
-- security vulnerabilities,
-- data-loss or annotation-corruption bugs,
-- install or launch breakage caused by upstream dependency drift.
-
-Feature backports and non-critical bugs are out of scope; all new development happens on v7.x.
-
-### Upgrading from v6.x to v7
-
-v7.0.0 raises the platform floor:
-
-- **Qt binding:** the GUI moved from PyQt5 (Qt5) to PySide6 (Qt6). `pip install labelme` now pulls PySide6 instead of PyQt5.
-- **Python:** the minimum is now Python 3.12 (3.10 and 3.11 are dropped).
-- **OS:** Qt6 requires a 64-bit macOS, Windows, or Linux; older OSes that only Qt5 supported are no longer covered.
-- **No public Python API:** labelme is an application, not a library, and exposes no stable Python API. Its internal modules were privatized in v7 (renamed to underscore-prefixed names), so `import labelme.app`, `labelme.utils`, `labelme.widgets`, and similar imports no longer work. If you previously imported labelme internals, pin `labelme<7` and vendor the code you need; see [`examples/utils.py`](examples/utils.py) for copy-and-adapt reference code that reads the JSON annotation format without depending on labelme.
-
-If you need to stay on PyQt5/Qt5, Python 3.10 or 3.11, or an older OS, pin to the v6.3.x maintenance line:
+Or run directly from a cloned repository using [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
-pip install 'labelme<7'
+git clone https://github.com/phanhai27/labelme.git
+cd labelme
+uv sync
+uv run labelme
 ```
 
-All previous releases remain installable from [PyPI](https://pypi.org/project/labelme/#history), so existing pins keep working.
+______________________________________________________________________
 
-v7.0.0 also changes config parsing:
-
-- **Config booleans:** `~/.labelmerc` is now parsed with ruamel.yaml (YAML 1.2), so the boolean spellings `yes`/`no`/`on`/`off` (in any capitalization) are read as strings rather than booleans. If you set any boolean option this way, switch it to `true`/`false`.
-
-### Public interface
-
-labelme is an application. The interfaces you can build on and that we keep stable are:
-
-- the **command-line interface** (`labelme ...`),
-- the **on-disk JSON annotation format**, and
-- the **`~/.labelmerc` config format**.
-
-Everything else, including the Python import surface, is internal and may change or be renamed without notice. To consume annotations from your own code, read the JSON format directly (see [`examples/utils.py`](examples/utils.py)).
-
-## Usage
-
-Run `labelme --help` for detail.\
-The annotations are saved as a [JSON](http://www.json.org/) file.
-
-JPEG 2000 images (`.jp2`, `.jpx`, `.j2k`, `.j2c`) can be opened, scanned from a
-folder, or dragged into the window when Pillow has OpenJPEG support. They are
-decoded to PNG in memory for Qt, preserving pixel values and transparency;
-the source image is unchanged.
-
-Medical DICOM images (`.dcm`, `.dicom`) are decoded directly from 16-bit raw pixel data with Modality LUT (`RescaleSlope` / `RescaleIntercept`) into 32-bit float Hounsfield Units (`HU`) via `SimpleITK` and `pydicom`. Annotations are saved with `imageData: null`, strictly sanitized PII-free 3D spatial geometry (`pixelSpacingMm`, `sliceThicknessMm`, `imagePositionPatient`, `imageOrientationPatient`), and the active `viewState` (`appliedWindowCenter`, `appliedWindowWidth`, `appliedPresetName`, `isInverted`).
+## Clinical Workflows & Shortcuts
 
 ```bash
-labelme  # just open gui
-
-# tutorial (single image example)
-cd examples/tutorial
-labelme apc2016_obj3.jpg  # specify image file
-labelme apc2016_obj3.jpg --output annotations/  # read and save annotation files in an annotation folder
-labelme apc2016_obj3.jpg --with-image-data  # include image data in JSON file
-labelme apc2016_obj3.jpg \
-  --labels highland_6539_self_stick_notes,mead_index_cards,kong_air_dog_squeakair_tennis_ball  # specify label list
-
-# semantic segmentation example
-cd examples/semantic_segmentation
-labelme data_annotated/  # Open a folder to annotate all images in it
-labelme data_annotated/ --labels labels.txt  # specify label list with a file
+labelme                                    # Launch GUI (with startup splash screen)
+labelme /path/to/ct_series/                # Open a folder of DICOM (.dcm) slices or 2D images
+labelme slice_001.dcm --output labels/     # Save PII-free JSON annotations to a dedicated folder
 ```
 
-### Mouse & Keyboard Shortcuts (Canvas Navigation, Drawing & Medical DICOM)
+### 1. Medical DICOM Window/Level (`WL/WW`) & Clinical Presets
 
-#### 1. Focal Zoom & View Fitting
+| Action | Mouse / Shortcut | Window Center (`WL`) | Window Width (`WW`) | Clinical Use Case |
+| :--- | :---: | :---: | :---: | :--- |
+| **Interactive WL/WW Drag** | **`Right-Click Drag`** | Vertical drag (`-dy`) | Horizontal drag (`+dx`) | Real-time PACS/Slicer-style windowing on the Canvas (a stationary `Right-Click` still opens the Context Menu) |
+| **Auto Window** | **`1`** | Header / `P1–P99` | Header / `P1–P99` | Restore DICOM header default or `[1%, 99%]` percentile window |
+| **CT Brain** | **`2`** | `40` | `80` | Brain parenchyma window |
+| **CT Lung** | **`3`** | `-600` | `1500` | Lung parenchyma & airways window |
+| **CT Soft Tissue** | **`4`** | `40` | `400` | Mediastinum / abdominal soft tissue window |
+| **CT Liver** | **`5`** | `60` | `160` | Hepatic parenchyma window |
+| **CT Bone** | **`6`** | `400` | `1800` | Cortical & trabecular bone window |
+| **CT Stroke** | **`7`** | `32` | `8` | High-contrast acute ischemic stroke window |
+| **Invert Monochrome** | **`I`** | *(unchanged)* | *(unchanged)* | Toggle `MONOCHROME1` / `MONOCHROME2` inversion |
+
+### 2. Focal Zoom & View Fitting
 
 | Action | Mouse / Shortcut | Description |
 | :--- | :--- | :--- |
-| **Focal Zoom In / Out** | `Mouse Wheel` (or `Ctrl + Wheel`) | Zoom in/out directly anchored at the cursor position |
+| **Focal Zoom In / Out** | `Mouse Wheel` (or `Ctrl + Wheel`) | Zoom in/out anchored directly at the cursor position |
 | **Step Zoom In / Out** | `Ctrl + +` / `Ctrl + -` | Zoom in or out around the viewport center |
-| **Fit to Window** | `Ctrl + F` | Fit the entire image inside the viewport |
-| **Fit to Selection** | `Ctrl + Shift + F` | Zoom and center on the currently selected shapes |
-| **Actual Size (100%)** | `Ctrl + 0` | Reset zoom scale to 100% |
+| **Fit to Window** | `Ctrl + F` | Fit the entire slice/image inside the viewport |
+| **Fit to Selection** | `Ctrl + Shift + F` | Zoom and center on the currently selected lesion(s) |
+| **Actual Size (100%)** | `Ctrl + 0` | Reset zoom scale to 100% (1:1 image pixel) |
 
-#### 2. Pan (Hand Tool & 50% Viewport Edge Over-pan)
+### 3. Pan (Hand Tool & 50% Viewport Edge Over-Pan)
 
 | Action | Mouse / Shortcut | Description |
 | :--- | :--- | :--- |
-| **Spring-loaded Hand Pan** | **Hold `Space` + `Left-Click Drag`** | Temporarily pan the canvas in any mode (including while mid-drawing a `Polygon` or `AI-Segment` without closing or losing the active draft); supports **50% viewport over-pan** to center peripheral/edge lesions |
-| **Pan Tool Mode** | **`H`** (or **Pan** button on Left Toolbar) | Switch to dedicated Hand Pan mode (`Left-Click Drag` pans the image) |
+| **Spring-Loaded Hand Pan** | **Hold `Space` + `Left-Click Drag`** | Temporarily pan the canvas in any mode (including mid-polygon or mid-AI segmentation without losing active vertices); supports **50% viewport over-pan** to center peripheral lesions |
+| **Dedicated Pan Mode** | **`H`** (or **Pan** Hand button on Toolbar) | Switch to Hand Pan mode (`Left-Click Drag` pans the image) |
 | **Middle-Button Pan** | **`Middle-Click Drag`** | Pan the image at any zoom level |
 | **Select / Edit Mode** | `Ctrl + J` | Switch back to Select / Edit Shapes mode |
 
-#### 3. Drawing & Finalizing Annotations
+### 4. Slice Navigation & Shape Drawing
 
 | Action | Mouse / Shortcut | Description |
 | :--- | :--- | :--- |
+| **Scroll Previous / Next Slice** | **`Shift + Mouse Wheel`** | Rapidly scroll through Previous (`Wheel Up`) / Next (`Wheel Down`) slices in a study (locked while actively drawing) |
+| **Previous / Next Slice** | **`A`** / **`D`** | Open the previous (`A`) or next (`D`) slice/image in the list |
 | **Finalize / Close Shape** | **`Enter` (`Return`)** or `Double-Click` | Finalize and close the active `Polygon`, `LineStrip`, `AI-Segment`, or `AI-Find All` draft |
-| **Undo Last Point** | `Backspace` / `Ctrl + Z` | Remove the last placed vertex while drawing |
+| **Undo Last Vertex** | `Backspace` / `Ctrl + Z` | Remove the last placed vertex while drawing |
 | **Cancel Active Draft** | `Esc` | Discard the shape or AI draft currently being drawn |
 
-#### 4. Image / Slice Navigation
+______________________________________________________________________
 
-| Action | Mouse / Shortcut | Description |
-| :--- | :--- | :--- |
-| **Scroll Previous / Next Slice** | **`Shift + Mouse Wheel`** | Rapidly scroll through Previous (`Wheel Up`) / Next (`Wheel Down`) slices or images in the folder (automatically locked while actively drawing a shape) |
-| **Previous / Next Image** | **`A`** / **`D`** | Open the previous (`A`) or next (`D`) image/slice in the list |
-| **Scrollbar Scroll** | `Alt + Mouse Wheel` | Traditional vertical/horizontal scrollbar scrolling |
+## Medical Terminology Navigator (3D Slicer Style)
 
-#### 5. Medical DICOM Window/Level (`WL/WW`) & Clinical Presets
+Modeled after 3D Slicer's *Terminologies* module, the right-hand **Label List** dock and **Shape Label** popup organize clinical findings into anatomical categories:
 
-| Action | Mouse / Shortcut | Window Center (`WL`) | Window Width (`WW`) | Description |
-| :--- | :---: | :---: | :---: | :--- |
-| **Interactive WL/WW Drag** | **`Right-Click Drag`** | Vertical drag (`-dy`) | Horizontal drag (`+dx`) | Real-time PACS/Slicer-style windowing directly on the Canvas (a stationary `Right-Click` still opens the Context Menu) |
-| **Auto Window** | **`1`** | Header / `P1–P99` | Header / `P1–P99` | Restore default DICOM header or percentile `[1%, 99%]` window |
-| **CT Brain** | **`2`** | `40` | `80` | Brain parenchyma window |
-| **CT Lung** | **`3`** | `-600` | `1500` | Lung parenchyma window |
-| **CT Soft Tissue** | **`4`** | `40` | `400` | Mediastinum / soft tissue window |
-| **CT Liver** | **`5`** | `60` | `160` | Hepatic parenchyma window |
-| **CT Bone** | **`6`** | `400` | `1800` | Cortical / trabecular bone window |
-| **CT Stroke** | **`7`** | `32` | `8` | High-contrast acute ischemic stroke window |
-| **Invert Monochrome** | **`I`** | *(unchanged)* | *(unchanged)* | Toggle monochrome inversion (`MONOCHROME1` / `MONOCHROME2`) |
+1. **Two Rapid Clinical Annotation Workflows**:
+   - **Draw First -> Filter & Double-Click Label**: Draw a lesion on the canvas; in the `Shape Label` popup, filter by Anatomical Category or type any keyword/synonym (in English or your local language), then **Double-Click** the row to assign immediately.
+   - **Pre-Select Label -> Draw Continuously**: Click a label in the right-hand `Label List` dock first (optionally disable *Show label popup on new shape* in Settings), then draw multiple lesions of that finding consecutively. Press `Esc` in the `Label List` dock to clear the pre-selection.
+2. **Context-Aware Short Names**:
+   - When filtering by a specific anatomical category (e.g., `Lung parenchyma` or `Pleura`), redundant anatomical prefixes are shortened (e.g., `Lung opacity` -> `Opacity`, `Pulmonary nodule` -> `Nodule`, `Pleural effusion` -> `Effusion`) for rapid visual scanning.
+   - When viewing `All` categories or inspecting the `Shape List` / `Canvas`, full unambiguous names are displayed.
+3. **Full CRUD for Custom Categories & Labels**:
+   - **Manage Labels**: Click `+` next to the category dropdown to create a new medical label with a Canonical English ID, localized display name, anatomical category, and clinical RGB color. Hover any label row (or right-click) to **Edit** or **Delete** (with confirmation).
+   - **Manage Anatomical Categories**: Inside the Medical Label dialog, click `+`, the Edit (pencil) button, or the Delete (trash) button next to the Category selector to create, rename/translate, or delete custom anatomical categories.
 
-#### 6. Medical Terminology Navigator & Anatomical Category Filtering (3D Slicer Style)
+______________________________________________________________________
 
-Labelme includes a built-in **Medical Terminology Navigator** modeled after 3D Slicer's *Terminologies* module, preloaded with **21 clinical findings** organized into **4 anatomical categories** (`Lung parenchyma`, `Pleura`, `Hilum / Mediastinum`, and `Heart / Diaphragm / Trachea`) with distinct clinical RGB colors:
+## DICOM JSON Schema & PII Safety
 
-- **Locale-Aware UI Display**: Automatically renders clinical terms and anatomical category names in the active UI language configured via `File -> Settings -> Language` (falling back to canonical English when a translation is not defined for the current locale).
-- **Context-Aware Short Names**: When filtering by a specific anatomical category (e.g., `Lung parenchyma` or `Pleura`), redundant anatomical prefixes are shortened (e.g., `Lung opacity` -> `Opacity`, `Pulmonary nodule` -> `Nodule`, `Pleural effusion` -> `Effusion`) for rapid visual scanning. When viewing `All` categories or inspecting the `Shape List` / `Canvas`, full unambiguous names are displayed.
-- **100% Canonical English JSON Output**: Regardless of the active UI language or whether a shortened category label was selected, all annotations written to `.json` files (`shapes[*].label`) are stored in **100% Canonical English** (e.g., `"Lung opacity"`, `"Pulmonary nodule"`, `"Pleural calcification"`) for standardized downstream AI training.
-- **Two Rapid Clinical Annotation Workflows**:
-  1. **Draw First -> Double-Click Label**: Draw a lesion on the canvas; in the `Shape Label` popup, filter by Anatomical Category or type any keyword/synonym (e.g., `"opacity"`, `"nodule"`, `"collapse"`, `"deviation"`, or localized terms), then **Double-Click** the row to assign immediately.
-  2. **Pre-Select Label -> Draw Continuously**: Click a label in the right-hand `Label List` dock first (optionally disable *Show label popup on new shape* in Settings), then draw multiple lesions of that finding consecutively. Press `Esc` in the `Label List` dock to clear the pre-selection.
-- **Add Custom Medical Labels (`+`)**: Click the `+` button next to the category dropdown in the `Label List` dock or `Shape Label` popup to add new clinical findings or custom anatomical categories via a validated Form UI (enforcing a non-empty ASCII Canonical English ID for AI JSON export, with optional localized display names) and persist them automatically to `~/.labelmerc`.
+When annotating a DICOM file (`slice_001.dcm`), Labelme writes a companion `slice_001.json` with `imageData: null` and a strictly sanitized `otherData.dicom` block containing only spatial geometry, radiometry, and viewing parameters:
 
-### Command Line Arguments
-
-Run `labelme --help` for the full list.
-
-### FAQ
-
-- **How to convert JSON file to numpy array?** See [examples/tutorial](examples/tutorial#convert-to-dataset).
-- **How to load label PNG file?** See [examples/tutorial](examples/tutorial#how-to-load-label-png-file).
-- **How to get annotations for semantic segmentation?** See [examples/semantic_segmentation](examples/semantic_segmentation).
-- **How to get annotations for instance segmentation?** See [examples/instance_segmentation](examples/instance_segmentation).
-
-## Examples
-
-- [Image Classification](examples/classification)
-- [Bounding Box Detection](examples/bbox_detection)
-- [Semantic Segmentation](examples/semantic_segmentation)
-- [Instance Segmentation](examples/instance_segmentation)
-- [Video Annotation](examples/video_annotation)
-
-## How to build standalone executable
-
-```bash
-LABELME_PATH=./labelme
-OSAM_PATH=$(python -c 'import os, osam; print(os.path.dirname(osam.__file__))')
-pyinstaller labelme/labelme/__main__.py \
-  --name=Labelme \
-  --windowed \
-  --noconfirm \
-  --specpath=build \
-  --add-data=$(OSAM_PATH)/_models/yoloworld/clip/bpe_simple_vocab_16e6.txt.gz:osam/_models/yoloworld/clip \
-  --add-data=$(LABELME_PATH)/_config/default_config.yaml:labelme/_config \
-  --add-data=$(LABELME_PATH)/icons/*:labelme/icons \
-  --add-data=$(LABELME_PATH)/translate/*:translate \
-  --icon=$(LABELME_PATH)/icons/icon-256.png \
-  --onedir
+```json
+{
+  "version": "7.12.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "Pulmonary nodule",
+      "points": [[184.5, 210.0], [202.0, 228.5]],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {},
+      "mask": null
+    }
+  ],
+  "imagePath": "slice_001.dcm",
+  "imageData": null,
+  "imageHeight": 512,
+  "imageWidth": 512,
+  "otherData": {
+    "dicom": {
+      "uids": {
+        "sopInstanceUid": "1.2.840.113619.2.55.3.604688",
+        "seriesInstanceUid": "1.2.840.113619.2.55.3.604687",
+        "studyInstanceUid": "1.2.840.113619.2.55.3.604686",
+        "frameOfReferenceUid": "1.2.840.113619.2.55.3.604685",
+        "instanceNumber": 1
+      },
+      "geometry": {
+        "pixelSpacingMm": [0.703125, 0.703125],
+        "sliceThicknessMm": 1.25,
+        "spacingBetweenSlicesMm": 1.25,
+        "imagePositionPatient": [-180.0, -180.0, -45.5],
+        "imageOrientationPatient": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+      },
+      "radiometry": {
+        "modality": "CT",
+        "photometricInterpretation": "MONOCHROME2",
+        "bitsStored": 16,
+        "rescaleSlope": 1.0,
+        "rescaleIntercept": -1024.0,
+        "rescaleType": "HU",
+        "headerWindowCenter": -600.0,
+        "headerWindowWidth": 1500.0
+      },
+      "viewState": {
+        "appliedWindowCenter": -600.0,
+        "appliedWindowWidth": 1500.0,
+        "appliedPresetName": "ct_lung",
+        "isInverted": false
+      }
+    }
+  }
+}
 ```
 
-## Development
+______________________________________________________________________
 
-Install [just](https://just.systems/man/en/packages.html) 1.58.0 or newer and
-[uv](https://docs.astral.sh/uv/getting-started/installation/). Recipes use Bash;
-on Windows, install Git for Windows and make its Bash available on `PATH`.
+## Development & Building Installers
 
-Run `just` to list commands and their arguments. Common commands are
-`just setup`, `just lint`, and `just test`.
+Install [just](https://just.systems/man/en/packages.html) (1.58.0+) and [uv](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+just setup   # Sync dependencies via uv
+just lint    # Run ruff, gruff, ty, taplo, mdformat, yamlfix, and typos
+just test    # Run unit and E2E test suites
+```
+
+To build standalone executables locally with PyInstaller:
+
+```bash
+uv run pyinstaller Labelme.spec --noconfirm
+```
+
+______________________________________________________________________
 
 ## License & Attribution
 
 This software is distributed under the **[GNU General Public License v3.0 (GPL-3.0-only)](LICENSE)**.
 
-- **Medical DICOM Edition / Fork Maintainer (2026):** [phanhai27](https://github.com/phanhai27) (`phanhai27@gmail.com`) — Modified to add 16-bit Medical DICOM (`SimpleITK` + `pydicom`) Hounsfield Unit windowing, clinical `WL/WW` presets, Slicer Data Probe, zero-loss PII-sanitized JSON annotation storage, 3D Slicer-style Medical Terminology Navigator, canvas ergonomics, and standalone Windows/macOS installers.
+- **Medical DICOM & AI Edition Maintainer (2026):** [phanhai27](https://github.com/phanhai27) (`phanhai27@gmail.com`) — Added 16-bit Medical DICOM (`SimpleITK` + `pydicom`) Hounsfield Unit windowing, clinical `WL/WW` presets, Slicer Data Probe, zero-loss PII-sanitized JSON annotation storage, 3D Slicer-style Medical Terminology Navigator with full Category/Label CRUD, PACS canvas ergonomics, Linux `Fcitx5`/`IBus` IME bridge, and standalone Windows/macOS installers.
 - **Original Author & Upstream Project:** Kentaro Wada ([wkentaro/labelme](https://github.com/wkentaro/labelme), originally forked from [mpitid/pylabelme](https://github.com/mpitid/pylabelme)).
