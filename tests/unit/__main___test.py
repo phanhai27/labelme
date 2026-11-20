@@ -15,14 +15,19 @@ from loguru import logger
 from PySide6 import QtCore
 from PySide6 import QtWidgets
 
+from labelme.__main__ import _APP_ID
 from labelme.__main__ import _LOGGER_LEVELS
+from labelme.__main__ import _create_splash_screen
+from labelme.__main__ import _ensure_linux_desktop_integration
 from labelme.__main__ import _handle_exception
 from labelme.__main__ import _log_environment
 from labelme.__main__ import _LoggerIO
 from labelme.__main__ import _parse_list_arg
 from labelme.__main__ import _resolve_config_source
 from labelme.__main__ import _route_qt_logging_to_loguru
+from labelme.__main__ import _set_windows_app_user_model_id
 from labelme.__main__ import _setup_loguru
+from labelme.__main__ import _update_splash_message
 from labelme.__main__ import main
 
 
@@ -449,3 +454,33 @@ def test_log_environment_lists_installed_ai_packages_only(
 
     (message,) = messages
     assert f"versions={installed!r}" in message
+
+
+@pytest.mark.usefixtures("qapp")
+def test_create_splash_screen_and_update_message() -> None:
+    splash = _create_splash_screen()
+    try:
+        assert not splash.pixmap().isNull()
+        _update_splash_message(
+            splash=splash,
+            message="Loading medical imaging & AI modules...",
+        )
+        _update_splash_message(splash=None, message="Ignored when disabled")
+    finally:
+        splash.close()
+
+
+def test_set_windows_app_user_model_id_is_safe_on_all_platforms() -> None:
+    _set_windows_app_user_model_id()
+
+
+def test_ensure_linux_desktop_integration_writes_desktop_entry(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    _ensure_linux_desktop_integration()
+    if not sys.platform.startswith("linux"):
+        return
+    desktop_file = tmp_path / "applications" / f"{_APP_ID}.desktop"
+    assert desktop_file.is_file()
+    assert "Icon=" in desktop_file.read_text(encoding="utf-8")

@@ -18,6 +18,7 @@ from typing import override
 
 from loguru import logger
 from PySide6 import QtCore
+from PySide6 import QtGui
 from PySide6 import QtWidgets
 from ruamel.yaml.error import YAMLError
 
@@ -27,10 +28,11 @@ from labelme import __version__
 from . import _config
 from . import _locale
 from . import _yaml
-from ._app import MainWindow
 from ._label_file import is_label_file_path
+from ._utils import app_icon
 from ._utils import apply_color_theme
-from ._utils import new_icon
+
+_APP_ID: Final = "io.github.phanhai27.labelme"
 
 _LOGGER_LEVELS: Final = (  # noqa: GR011 -- parametrized by tests
     "debug",
@@ -272,6 +274,132 @@ def _resolve_config_source(
     sys.exit(1)
 
 
+def _set_windows_app_user_model_id() -> None:
+    if sys.platform != "win32":
+        return
+    with contextlib.suppress(Exception):
+        import ctypes  # noqa: PLC0415
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(_APP_ID)
+
+
+def _ensure_linux_desktop_integration() -> None:
+    if not sys.platform.startswith("linux"):
+        return
+    # On Wayland (Ubuntu / GNOME), the compositor ignores Qt's setWindowIcon()
+    # for the dock/taskbar and instead looks up `<desktopFileName>.desktop` in
+    # XDG_DATA_HOME/applications. Creating it up front gives both the dock icon
+    # and the xdg-desktop-portal registration a valid entry.
+    with contextlib.suppress(Exception):
+        icon_path = Path(__file__).resolve().parent / "icons" / "icon-256.png"
+        if not icon_path.is_file():
+            return
+        xdg_data_home = os.environ.get("XDG_DATA_HOME")
+        data_dir = (
+            Path(xdg_data_home)
+            if xdg_data_home
+            else Path("~/.local/share").expanduser()
+        )
+        apps_dir = data_dir / "applications"
+        apps_dir.mkdir(parents=True, exist_ok=True)
+        desktop_file = apps_dir / f"{_APP_ID}.desktop"
+        content = (
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            f"Name={__appname__}\n"
+            "Comment=Medical Image Annotation with Python\n"
+            f"Icon={icon_path}\n"
+            "Terminal=false\n"
+            "Categories=Graphics;Science;MedicalSoftware;\n"
+            f"StartupWMClass={_APP_ID}\n"
+            "NoDisplay=true\n"
+        )
+        if (
+            not desktop_file.is_file()
+            or desktop_file.read_text(encoding="utf-8") != content
+        ):
+            desktop_file.write_text(content, encoding="utf-8")
+        QtGui.QGuiApplication.setDesktopFileName(_APP_ID)
+
+
+def _create_splash_screen() -> QtWidgets.QSplashScreen:
+    width, height = 420, 200
+    dpr = 1.0
+    if screen := QtGui.QGuiApplication.primaryScreen():
+        dpr = max(1.0, screen.devicePixelRatio())
+
+    image = QtGui.QImage(
+        int(width * dpr),
+        int(height * dpr),
+        QtGui.QImage.Format.Format_ARGB32_Premultiplied,
+    )
+    image.setDevicePixelRatio(dpr)
+    image.fill(QtCore.Qt.GlobalColor.transparent)
+
+    painter = QtGui.QPainter(image)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+
+    card_rect = QtCore.QRectF(2.0, 2.0, width - 4.0, height - 4.0)
+    painter.setBrush(QtGui.QColor("#1e293b"))
+    painter.setPen(QtGui.QPen(QtGui.QColor("#334155"), 1.5))
+    painter.drawRoundedRect(card_rect, 12.0, 12.0)
+
+    logo = app_icon().pixmap(QtCore.QSize(72, 72))
+    if not logo.isNull():
+        painter.drawPixmap(32, 38, 72, 72, logo)
+
+    title_font = QtGui.QFont(painter.font())
+    title_font.setPointSize(20)
+    title_font.setBold(True)
+    painter.setFont(title_font)
+    painter.setPen(QtGui.QColor("#f8fafc"))
+    painter.drawText(
+        QtCore.QRectF(124.0, 42.0, width - 144.0, 34.0),
+        QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
+        __appname__,
+    )
+
+    subtitle_font = QtGui.QFont(painter.font())
+    subtitle_font.setPointSize(10)
+    subtitle_font.setBold(False)
+    painter.setFont(subtitle_font)
+    painter.setPen(QtGui.QColor("#94a3b8"))
+    painter.drawText(
+        QtCore.QRectF(124.0, 78.0, width - 144.0, 24.0),
+        QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
+        f"Version {__version__}",
+    )
+
+    painter.setPen(QtGui.QPen(QtGui.QColor("#334155"), 1.0))
+    painter.drawLine(32, 146, width - 32, 146)
+    painter.end()
+
+    splash = QtWidgets.QSplashScreen(
+        QtGui.QPixmap.fromImage(image),
+        QtCore.Qt.WindowType.WindowStaysOnTopHint
+        | QtCore.Qt.WindowType.FramelessWindowHint,
+    )
+    splash.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+    status_font = QtGui.QFont(splash.font())
+    status_font.setPointSize(9)
+    splash.setFont(status_font)
+    return splash
+
+
+def _update_splash_message(
+    *, splash: QtWidgets.QSplashScreen | None, message: str
+) -> None:
+    if splash is None:
+        return
+    splash.showMessage(
+        f"  {message}",
+        QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignLeft,
+        QtGui.QColor("#cbd5e1"),
+    )
+    QtWidgets.QApplication.processEvents()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="labelme")
     parser.add_argument("--version", "-V", action="store_true", help="show version")
@@ -453,22 +581,37 @@ def main() -> None:
         f"qtbase_{locale_name}",
         QtCore.QLibraryInfo.path(QtCore.QLibraryInfo.LibraryPath.TranslationsPath),
     )
+    _set_windows_app_user_model_id()
+    _ensure_linux_desktop_integration()
+    QtWidgets.QApplication.setApplicationName(__appname__)
     app = QtWidgets.QApplication(sys.argv)
     # Only Windows 11's style looks current: Qt's macOS style draws dated lists
     # and dock titles, and Windows 10's forces a light palette in dark mode.
     if app.style().name() != "windows11":
         app.setStyle("Fusion")
     apply_color_theme(theme=color_theme)
-    app.setApplicationName(__appname__)
-    # On macOS the window icon replaces the Dock icon, which needs Apple's
-    # padded rounded shape rather than the full-bleed square.
-    app.setWindowIcon(
-        new_icon(
-            name="icon-macos-512.png" if sys.platform == "darwin" else "icon-256.png"
-        )
-    )
+    app.setWindowIcon(app_icon())
     app.installTranslator(qt_translator)
     app.installTranslator(translator)
+
+    show_splash = not reset_config and QtGui.QGuiApplication.platformName() not in (
+        "offscreen",
+        "minimal",
+    )
+    splash = _create_splash_screen() if show_splash else None
+    if splash is not None:
+        splash.show()
+        _update_splash_message(
+            splash=splash,
+            message="Loading medical imaging & AI modules...",
+        )
+
+    from ._app import MainWindow  # noqa: PLC0415
+
+    _update_splash_message(
+        splash=splash,
+        message="Initializing workspace...",
+    )
     win = MainWindow(
         config_file=config_file,
         config_overrides=config_overrides,
@@ -477,12 +620,16 @@ def main() -> None:
     )
 
     if reset_config:
+        if splash is not None:
+            splash.close()
         logger.info(f"Resetting window state: {win._window_state.fileName()}")
         win._window_state.clear()
         sys.exit(0)
 
     with contextlib.redirect_stderr(new_target=_LoggerIO()):
         win.show()
+        if splash is not None:
+            splash.finish(win)
         win.raise_()
         sys.exit(app.exec())
 

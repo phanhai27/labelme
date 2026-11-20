@@ -15,6 +15,7 @@ from pytestqt.qtbot import QtBot
 from labelme._utils._qt import _ICONS_DIR
 from labelme._utils._qt import _TintedSvgIconEngine
 from labelme._utils._qt import _toolbar_label
+from labelme._utils._qt import app_icon
 from labelme._utils._qt import direction_angle
 from labelme._utils._qt import modifier_text
 from labelme._utils._qt import new_action
@@ -114,6 +115,18 @@ def test_new_icon_with_path_that_includes_subdir() -> None:
     icon = new_icon(name="phosphor/info.svg")
     assert isinstance(icon, QtGui.QIcon)
     assert not icon.isNull()
+
+
+@pytest.mark.usefixtures("qtbot")
+def test_app_icon_provides_multiple_resolutions() -> None:
+    icon = app_icon()
+    assert isinstance(icon, QtGui.QIcon)
+    assert not icon.isNull()
+    if sys.platform == "darwin":
+        return
+    sizes = {(s.width(), s.height()) for s in icon.availableSizes()}
+    for expected in ((16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)):
+        assert expected in sizes
 
 
 # ---------------------------------------------------------------------------

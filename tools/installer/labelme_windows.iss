@@ -35,9 +35,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "..\..\dist\Labelme\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Labelme"; Filename: "{app}\Labelme.exe"; IconFilename: "{app}\Labelme.exe"
+Name: "{group}\Labelme"; Filename: "{app}\Labelme.exe"; IconFilename: "{app}\Labelme.exe"; AppUserModelID: "io.github.phanhai27.labelme"
 Name: "{group}\{cm:UninstallProgram,Labelme}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Labelme"; Filename: "{app}\Labelme.exe"; Tasks: desktopicon; IconFilename: "{app}\Labelme.exe"
+Name: "{autodesktop}\Labelme"; Filename: "{app}\Labelme.exe"; Tasks: desktopicon; IconFilename: "{app}\Labelme.exe"; AppUserModelID: "io.github.phanhai27.labelme"
 
 [Run]
 Filename: "{app}\Labelme.exe"; Description: "{cm:LaunchProgram,Labelme}"; Flags: nowait postinstall skipifsilent

@@ -347,6 +347,7 @@ class MainWindow(QtWidgets.QMainWindow):
     ) -> None:
         super().__init__()
         self.setWindowTitle(__appname__)
+        self.setWindowIcon(_utils.app_icon())
 
         self._config_file, self._config = self._load_config(
             config_file=config_file, config_overrides=config_overrides

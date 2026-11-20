@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import os
 import re
+import sys
 from collections.abc import Callable
 from collections.abc import Sequence
 from typing import Final
@@ -143,6 +144,22 @@ def new_icon(*, name: str) -> QtGui.QIcon:
         with open(path, "rb") as f:
             return QtGui.QIcon(_TintedSvgIconEngine(svg=f.read()))
     return QtGui.QIcon(path)
+
+
+def app_icon() -> QtGui.QIcon:
+    # On macOS the window icon replaces the Dock icon, which needs Apple's
+    # padded rounded shape rather than the full-bleed square.
+    if sys.platform == "darwin":
+        return new_icon(name="icon-macos-512.png")
+    icon = QtGui.QIcon()
+    for size in (16, 32, 48, 64, 128, 256):
+        path = os.path.join(_ICONS_DIR, f"icon-{size}.png")
+        if os.path.isfile(path):
+            icon.addFile(path, QtCore.QSize(size, size))
+    ico_path = os.path.join(_ICONS_DIR, "icon.ico")
+    if os.path.isfile(ico_path):
+        icon.addFile(ico_path)
+    return icon if not icon.isNull() else new_icon(name="icon-256.png")
 
 
 # The toolbar label on one line, for a column of buttons where it may fit.
