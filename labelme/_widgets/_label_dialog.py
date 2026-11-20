@@ -124,6 +124,8 @@ class LabelDialog(QtWidgets.QDialog):
     _flags_scroll: QtWidgets.QScrollArea
     _terminology_registry: MedicalTerminologyRegistry
     _on_add_label_requested: Callable[[], object] | None
+    _on_edit_label_requested: Callable[[str], object] | None
+    _on_delete_label_requested: Callable[[str], object] | None
     _selected_canonical_label: str | None
     _is_selecting_from_list: bool
     _ime_preedit_text: str
@@ -134,6 +136,8 @@ class LabelDialog(QtWidgets.QDialog):
     label_list: QtWidgets.QListWidget
     category_combo: CategoryFilterComboBox
     add_label_button: QtWidgets.QToolButton
+    edit_label_button: QtWidgets.QToolButton
+    delete_label_button: QtWidgets.QToolButton
 
     def __init__(
         self,
@@ -149,6 +153,8 @@ class LabelDialog(QtWidgets.QDialog):
         label_history: list[str] | None = None,
         terminology_registry: MedicalTerminologyRegistry | None = None,
         on_add_label_requested: Callable[[], object] | None = None,
+        on_edit_label_requested: Callable[[str], object] | None = None,
+        on_delete_label_requested: Callable[[str], object] | None = None,
     ) -> None:
         LABEL_LIST_HEIGHT: Final[int] = 150
 
@@ -163,6 +169,8 @@ class LabelDialog(QtWidgets.QDialog):
             else get_terminology_registry()
         )
         self._on_add_label_requested = on_add_label_requested
+        self._on_edit_label_requested = on_edit_label_requested
+        self._on_delete_label_requested = on_delete_label_requested
         self._selected_canonical_label = None
         self._is_selecting_from_list = False
         self._ime_preedit_text = ""
@@ -230,6 +238,12 @@ class LabelDialog(QtWidgets.QDialog):
         self.label_list = QtWidgets.QListWidget()
         self.label_list.setFixedHeight(LABEL_LIST_HEIGHT)
         self.label_list.setItemDelegate(ColorSwatchDelegate(parent=self.label_list))
+        self.label_list.setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.label_list.customContextMenuRequested.connect(
+            self._show_label_list_context_menu
+        )
 
         description_name = self.tr("Description")
         self.edit_description = QtWidgets.QTextEdit()
@@ -255,6 +269,20 @@ class LabelDialog(QtWidgets.QDialog):
         self.add_label_button.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.add_label_button.setToolTip(self.tr("Add New Medical Label…"))
         self.add_label_button.clicked.connect(self._handle_add_label_clicked)
+
+        self.edit_label_button = QtWidgets.QToolButton()
+        self.edit_label_button.setObjectName("edit_label_button")
+        self.edit_label_button.setText("✎")
+        self.edit_label_button.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
+        self.edit_label_button.setToolTip(self.tr("Edit Selected Medical Label…"))
+        self.edit_label_button.clicked.connect(self._handle_edit_label_clicked)
+
+        self.delete_label_button = QtWidgets.QToolButton()
+        self.delete_label_button.setObjectName("delete_label_button")
+        self.delete_label_button.setText("-")
+        self.delete_label_button.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
+        self.delete_label_button.setToolTip(self.tr("Delete Selected Medical Label"))
+        self.delete_label_button.clicked.connect(self._handle_delete_label_clicked)
 
         # Configure label list
         if sort_labels:
@@ -299,6 +327,8 @@ class LabelDialog(QtWidgets.QDialog):
         terminology_row.setSpacing(4)
         terminology_row.addWidget(self.category_combo, stretch=1)
         terminology_row.addWidget(self.add_label_button)
+        terminology_row.addWidget(self.edit_label_button)
+        terminology_row.addWidget(self.delete_label_button)
         main_layout.addLayout(terminology_row)
 
         main_layout.addWidget(button_box)
@@ -436,6 +466,44 @@ class LabelDialog(QtWidgets.QDialog):
             return item
         return None
 
+    def selected_canonical_label(self) -> str | None:
+        if self._selected_canonical_label:
+            return self._selected_canonical_label
+        current = self.label_list.currentItem()
+        if current is not None:
+            canonical = current.data(QtCore.Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str):
+                return canonical
+        visible = self.visible_label_items()
+        if visible:
+            canonical = visible[0].data(QtCore.Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str):
+                return canonical
+        return None
+
+    def _show_label_list_context_menu(self, pos: QtCore.QPoint, /) -> None:
+        item = self.label_list.itemAt(pos)
+        if item is None:
+            return
+        canonical = item.data(QtCore.Qt.ItemDataRole.UserRole)
+        if (
+            not isinstance(canonical, str)
+            or self._terminology_registry.get_item(canonical_label=canonical) is None
+        ):
+            return
+        self.label_list.setCurrentItem(item)
+        self._selected_canonical_label = canonical
+        menu = QtWidgets.QMenu(self)
+        edit_act = menu.addAction(self.tr("Edit Medical Label…"))
+        del_act = menu.addAction(self.tr("Delete Medical Label"))
+        chosen = menu.exec(
+            self.label_list.viewport().mapToGlobal(pos)  # ty: ignore[invalid-argument-type]
+        )
+        if chosen is edit_act:
+            self._handle_edit_label_clicked()
+        elif chosen is del_act:
+            self._handle_delete_label_clicked()
+
     def _handle_category_combo_changed(self, _index: int, /) -> None:
         self._apply_category_filter()
 
@@ -445,20 +513,125 @@ class LabelDialog(QtWidgets.QDialog):
         else:
             self._on_add_label_requested()
 
+    def _handle_edit_label_clicked(self) -> None:
+        canonical = self.selected_canonical_label()
+        if not canonical:
+            return
+        if self._on_edit_label_requested is None:
+            self.open_edit_label_dialog(canonical_label=canonical)
+        else:
+            self._on_edit_label_requested(canonical)
+
+    def _handle_delete_label_clicked(self) -> None:
+        canonical = self.selected_canonical_label()
+        if not canonical:
+            return
+        if self._on_delete_label_requested is None:
+            self.delete_medical_label(canonical_label=canonical)
+        else:
+            self._on_delete_label_requested(canonical)
+
     def open_add_label_dialog(self) -> MedicalLabelFormDialog:
         dialog = MedicalLabelFormDialog(
             registry=self._terminology_registry,
             on_label_added=self._on_form_label_added,
             on_category_added=lambda _cat: self.category_combo.refresh_categories(),
+            on_category_updated=lambda _old,
+            _cat: self._refresh_after_category_change(),
+            on_category_deleted=lambda _cat: self._refresh_after_category_change(),
             parent=self,
         )
         dialog.exec()
         return dialog
 
+    def open_edit_label_dialog(
+        self, *, canonical_label: str | None = None
+    ) -> MedicalLabelFormDialog | None:
+        target = canonical_label or self.selected_canonical_label()
+        if not target:
+            return None
+        term_item = self._terminology_registry.get_item(canonical_label=target)
+        if term_item is None:
+            return None
+        dialog = MedicalLabelFormDialog(
+            registry=self._terminology_registry,
+            editing_item=term_item,
+            on_label_updated=self._on_form_label_updated,
+            on_category_added=lambda _cat: self.category_combo.refresh_categories(),
+            on_category_updated=lambda _old,
+            _cat: self._refresh_after_category_change(),
+            on_category_deleted=lambda _cat: self._refresh_after_category_change(),
+            parent=self,
+        )
+        dialog.exec()
+        return dialog
+
+    def delete_medical_label(self, *, canonical_label: str | None = None) -> bool:
+        target = canonical_label or self.selected_canonical_label()
+        if not target:
+            return False
+        term_item = self._terminology_registry.get_item(canonical_label=target)
+        if term_item is None:
+            return False
+        display = self._terminology_registry.get_display_label(
+            canonical_label=term_item.canonical_label,
+            category_filter_active=False,
+        )
+        msg = QtWidgets.QMessageBox(self)
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Question)
+        msg.setWindowTitle(self.tr("Delete Medical Label"))
+        msg.setText(
+            self.tr("Are you sure you want to delete label '{label}'?").format(
+                label=display
+            )
+        )
+        msg.setStandardButtons(
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No
+        )
+        msg.setDefaultButton(QtWidgets.QMessageBox.StandardButton.No)
+        if msg.exec() != int(QtWidgets.QMessageBox.StandardButton.Yes):
+            return False
+
+        removed = self._terminology_registry.delete_label(
+            canonical_label=term_item.canonical_label
+        )
+        self.remove_label(label=removed.canonical_label)
+        self._apply_category_filter()
+        return True
+
+    def _refresh_after_category_change(self) -> None:
+        self.category_combo.refresh_categories()
+        valid_canonicals = set(self._terminology_registry.canonical_labels())
+        for i in reversed(range(self.label_list.count())):
+            item = self.label_list.item(i)
+            canonical = item.data(QtCore.Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str) and canonical not in valid_canonicals:
+                self.label_list.takeItem(i)
+        self._apply_category_filter()
+
     def _on_form_label_added(self, new_item: TerminologyItem, /) -> None:
         self.category_combo.refresh_categories()
         if self._find_item_by_canonical(label=new_item.canonical_label) is None:
             self._add_dialog_label_item(label=new_item.canonical_label)
+        self._apply_category_filter()
+        self.edit.setText(
+            self._terminology_registry.get_display_label(
+                canonical_label=new_item.canonical_label,
+                category_filter_active=self.is_category_filter_active(),
+            )
+        )
+        self._selected_canonical_label = new_item.canonical_label
+
+    def _on_form_label_updated(
+        self, old_canonical: str, new_item: TerminologyItem, /
+    ) -> None:
+        self.category_combo.refresh_categories()
+        item = self._find_item_by_canonical(label=old_canonical)
+        if item is not None:
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, new_item.canonical_label)
+            if isinstance(item, _DialogTerminologyListWidgetItem):
+                item.refresh_display_and_color()
         self._apply_category_filter()
         self.edit.setText(
             self._terminology_registry.get_display_label(

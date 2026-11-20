@@ -374,6 +374,26 @@
         <source>Add New Medical Label…</source>
         <translation>Add New Medical Label…</translation>
     </message>
+    <message>
+        <source>Edit Selected Medical Label…</source>
+        <translation>Edit Selected Medical Label…</translation>
+    </message>
+    <message>
+        <source>Delete Selected Medical Label</source>
+        <translation>Delete Selected Medical Label</translation>
+    </message>
+    <message>
+        <source>Edit Medical Label…</source>
+        <translation>Edit Medical Label…</translation>
+    </message>
+    <message>
+        <source>Delete Medical Label</source>
+        <translation>Delete Medical Label</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete label &apos;{label}&apos;?</source>
+        <translation>Are you sure you want to delete label &apos;{label}&apos;?</translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
@@ -1434,6 +1454,10 @@ Expected location: {path}</source>
         <translation>Category &apos;{category}&apos; already exists in the current preset.</translation>
     </message>
     <message>
+        <source>Edit Anatomical Category</source>
+        <translation>Edit Anatomical Category</translation>
+    </message>
+    <message>
         <source>Add Anatomical Category</source>
         <translation>Add Anatomical Category</translation>
     </message>
@@ -1477,6 +1501,10 @@ Expected location: {path}</source>
         <translation>+ Add New Category…</translation>
     </message>
     <message>
+        <source>Edit Medical Label</source>
+        <translation>Edit Medical Label</translation>
+    </message>
+    <message>
         <source>Add Medical Label</source>
         <translation>Add Medical Label</translation>
     </message>
@@ -1501,6 +1529,14 @@ Expected location: {path}</source>
         <translation>Add Anatomical Category</translation>
     </message>
     <message>
+        <source>Edit Anatomical Category</source>
+        <translation>Edit Anatomical Category</translation>
+    </message>
+    <message>
+        <source>Delete Anatomical Category</source>
+        <translation>Delete Anatomical Category</translation>
+    </message>
+    <message>
         <source>Canonical English Label *:</source>
         <translation>Canonical English Label *:</translation>
     </message>
@@ -1523,6 +1559,14 @@ Expected location: {path}</source>
     <message>
         <source>Display Color:</source>
         <translation>Display Color:</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete category &apos;{category}&apos; and its {count} label(s)?</source>
+        <translation>Are you sure you want to delete category &apos;{category}&apos; and its {count} label(s)?</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete category &apos;{category}&apos;?</source>
+        <translation>Are you sure you want to delete category &apos;{category}&apos;?</translation>
     </message>
 </context>
 <context>
@@ -1997,6 +2041,14 @@ Expected location: {path}</source>
         <translation>Add New Medical Label…</translation>
     </message>
     <message>
+        <source>Edit Selected Medical Label…</source>
+        <translation>Edit Selected Medical Label…</translation>
+    </message>
+    <message>
+        <source>Delete Selected Medical Label</source>
+        <translation>Delete Selected Medical Label</translation>
+    </message>
+    <message>
         <source>Label set</source>
         <translation>標籤集</translation>
     </message>
@@ -2011,6 +2063,18 @@ Expected location: {path}</source>
     <message>
         <source>Found in files</source>
         <translation>在檔案中找到</translation>
+    </message>
+    <message>
+        <source>Delete Medical Label</source>
+        <translation>Delete Medical Label</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete label &apos;{label}&apos;?</source>
+        <translation>Are you sure you want to delete label &apos;{label}&apos;?</translation>
+    </message>
+    <message>
+        <source>Edit Medical Label…</source>
+        <translation>Edit Medical Label…</translation>
     </message>
 </context>
 <context>

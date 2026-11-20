@@ -160,9 +160,13 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
     _clear_unused_button: QtWidgets.QToolButton
     _terminology_registry: MedicalTerminologyRegistry
     _on_add_label_requested: Callable[[], object] | None
+    _on_edit_label_requested: Callable[[str], object] | None
+    _on_delete_label_requested: Callable[[str], object] | None
 
     category_combo: CategoryFilterComboBox
     add_label_button: QtWidgets.QPushButton
+    edit_label_button: QtWidgets.QPushButton
+    delete_label_button: QtWidgets.QPushButton
 
     def __init__(
         self,
@@ -171,6 +175,8 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         on_clear_unused: Callable[[], None],
         terminology_registry: MedicalTerminologyRegistry | None = None,
         on_add_label_requested: Callable[[], object] | None = None,
+        on_edit_label_requested: Callable[[str], object] | None = None,
+        on_delete_label_requested: Callable[[str], object] | None = None,
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent=parent)
@@ -180,6 +186,8 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
             else get_terminology_registry()
         )
         self._on_add_label_requested = on_add_label_requested
+        self._on_edit_label_requested = on_edit_label_requested
+        self._on_delete_label_requested = on_delete_label_requested
 
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setItemDelegate(_LabelDelegate(parent=self))
@@ -196,15 +204,29 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         # "Edit…" QToolButton in existing unit and E2E tests.
         self.add_label_button = QtWidgets.QPushButton("+")
         self.add_label_button.setObjectName("add_label_button")
-        self.add_label_button.setFixedWidth(26)
+        self.add_label_button.setFixedWidth(22)
         self.add_label_button.setToolTip(self.tr("Add New Medical Label…"))
         self.add_label_button.clicked.connect(self._handle_add_label_clicked)
+
+        self.edit_label_button = QtWidgets.QPushButton("✎")
+        self.edit_label_button.setObjectName("edit_label_button")
+        self.edit_label_button.setFixedWidth(22)
+        self.edit_label_button.setToolTip(self.tr("Edit Selected Medical Label…"))
+        self.edit_label_button.clicked.connect(self._handle_edit_label_clicked)
+
+        self.delete_label_button = QtWidgets.QPushButton("-")
+        self.delete_label_button.setObjectName("delete_label_button")
+        self.delete_label_button.setFixedWidth(22)
+        self.delete_label_button.setToolTip(self.tr("Delete Selected Medical Label"))
+        self.delete_label_button.clicked.connect(self._handle_delete_label_clicked)
 
         controls_row = QtWidgets.QHBoxLayout()
         controls_row.setContentsMargins(0, 0, 0, 0)
         controls_row.setSpacing(2)
         controls_row.addWidget(self.category_combo, stretch=1)
         controls_row.addWidget(self.add_label_button)
+        controls_row.addWidget(self.edit_label_button)
+        controls_row.addWidget(self.delete_label_button)
 
         self._label_set_header = self._add_header(
             title=self.tr("Label set"),
@@ -259,6 +281,23 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         self.setItemWidget(item, widget)
         return item
 
+    def selected_canonical_label(self) -> str | None:
+        for item in self.selectedItems():
+            canonical = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str):
+                return canonical
+        current = self.currentItem()
+        if current is not None:
+            canonical = current.data(Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str):
+                return canonical
+        visible = self.visible_label_items()
+        if visible:
+            canonical = visible[0].data(Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str):
+                return canonical
+        return None
+
     def _handle_category_combo_changed(self, _index: int, /) -> None:
         self._apply_category_filter()
 
@@ -268,15 +307,104 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
         else:
             self._on_add_label_requested()
 
+    def _handle_edit_label_clicked(self) -> None:
+        canonical = self.selected_canonical_label()
+        if not canonical:
+            return
+        if self._on_edit_label_requested is None:
+            self.open_edit_label_dialog(canonical_label=canonical)
+        else:
+            self._on_edit_label_requested(canonical)
+
+    def _handle_delete_label_clicked(self) -> None:
+        canonical = self.selected_canonical_label()
+        if not canonical:
+            return
+        if self._on_delete_label_requested is None:
+            self.delete_medical_label(canonical_label=canonical)
+        else:
+            self._on_delete_label_requested(canonical)
+
     def open_add_label_dialog(self) -> MedicalLabelFormDialog:
         dialog = MedicalLabelFormDialog(
             registry=self._terminology_registry,
             on_label_added=self._on_form_label_added,
             on_category_added=lambda _cat: self.category_combo.refresh_categories(),
+            on_category_updated=lambda _old,
+            _cat: self._refresh_after_category_change(),
+            on_category_deleted=lambda _cat: self._refresh_after_category_change(),
             parent=self,
         )
         dialog.exec()
         return dialog
+
+    def open_edit_label_dialog(
+        self, *, canonical_label: str | None = None
+    ) -> MedicalLabelFormDialog | None:
+        target = canonical_label or self.selected_canonical_label()
+        if not target:
+            return None
+        term_item = self._terminology_registry.get_item(canonical_label=target)
+        if term_item is None:
+            return None
+        dialog = MedicalLabelFormDialog(
+            registry=self._terminology_registry,
+            editing_item=term_item,
+            on_label_updated=self._on_form_label_updated,
+            on_category_added=lambda _cat: self.category_combo.refresh_categories(),
+            on_category_updated=lambda _old,
+            _cat: self._refresh_after_category_change(),
+            on_category_deleted=lambda _cat: self._refresh_after_category_change(),
+            parent=self,
+        )
+        dialog.exec()
+        return dialog
+
+    def delete_medical_label(self, *, canonical_label: str | None = None) -> bool:
+        target = canonical_label or self.selected_canonical_label()
+        if not target:
+            return False
+        term_item = self._terminology_registry.get_item(canonical_label=target)
+        if term_item is None:
+            return False
+        display = self._terminology_registry.get_display_label(
+            canonical_label=term_item.canonical_label,
+            category_filter_active=False,
+        )
+        msg = QtWidgets.QMessageBox(self)
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Question)
+        msg.setWindowTitle(self.tr("Delete Medical Label"))
+        msg.setText(
+            self.tr("Are you sure you want to delete label '{label}'?").format(
+                label=display
+            )
+        )
+        msg.setStandardButtons(
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No
+        )
+        msg.setDefaultButton(QtWidgets.QMessageBox.StandardButton.No)
+        if msg.exec() != int(QtWidgets.QMessageBox.StandardButton.Yes):
+            return False
+
+        removed = self._terminology_registry.delete_label(
+            canonical_label=term_item.canonical_label
+        )
+        item = self.find_label_item(label=removed.canonical_label)
+        if item is not None:
+            self.takeItem(self.row(item))
+        self._apply_category_filter()
+        return True
+
+    def _refresh_after_category_change(self) -> None:
+        self.category_combo.refresh_categories()
+        valid_canonicals = set(self._terminology_registry.canonical_labels())
+        for row in reversed(range(1, self.row(self._found_header))):
+            item = self.item(row)
+            canonical = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(canonical, str) and canonical not in valid_canonicals:
+                self.takeItem(row)
+        self._apply_category_filter()
 
     def _on_form_label_added(self, new_item: TerminologyItem, /) -> None:
         self.category_combo.refresh_categories()
@@ -287,6 +415,39 @@ class UniqueLabelQListWidget(_EscapableQListWidget):
                 from_settings=True,
             )
         self._apply_category_filter()
+
+    def _on_form_label_updated(
+        self, old_canonical: str, new_item: TerminologyItem, /
+    ) -> None:
+        self.category_combo.refresh_categories()
+        item = self.find_label_item(label=old_canonical)
+        if item is not None:
+            item.setData(Qt.ItemDataRole.UserRole, new_item.canonical_label)
+            item.setData(LABEL_COLOR_ROLE, QtGui.QColor(*new_item.color))
+            if isinstance(item, _TerminologyListWidgetItem):
+                item.refresh_display_text()
+        self._apply_category_filter()
+
+    @override
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent, /) -> None:
+        item = self.itemAt(event.pos())
+        if item is None:
+            return
+        canonical = item.data(Qt.ItemDataRole.UserRole)
+        if (
+            not isinstance(canonical, str)
+            or self._terminology_registry.get_item(canonical_label=canonical) is None
+        ):
+            return
+        self.setCurrentItem(item)
+        menu = QtWidgets.QMenu(self)
+        edit_act = menu.addAction(self.tr("Edit Medical Label…"))
+        del_act = menu.addAction(self.tr("Delete Medical Label"))
+        chosen = menu.exec(event.globalPos())  # ty: ignore[invalid-argument-type]
+        if chosen is edit_act:
+            self._handle_edit_label_clicked()
+        elif chosen is del_act:
+            self._handle_delete_label_clicked()
 
     def _apply_category_filter(self) -> None:
         cat_id = self.category_combo.active_category_id()

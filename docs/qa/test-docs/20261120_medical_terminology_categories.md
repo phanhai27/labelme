@@ -30,9 +30,10 @@ ______________________________________________________________________
 
 | Tầng / Hộp thoại | Tên Class / File | Định danh (`objectName` / Thuộc tính) | Vai trò & Hành vi |
 | :--- | :--- | :--- | :--- |
-| **Form Thêm Nhãn** | `MedicalLabelFormDialog` (\[`_medical_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py)) | `category_combo` (`objectName="category_combo"`), `add_category_button` (`objectName="add_category_button"`) | `category_combo` liệt kê 4 nhóm mặc định (hiển thị theo ngôn ngữ UI) + dòng cuối `+ Add New Category…` (`NEW_CATEGORY_SENTINEL = "__new_category__"`). Nút `+` (`add_category_button`) nằm ngay bên phải `category_combo` để mở `MedicalCategoryFormDialog`. |
-| **Hộp thoại Thêm Nhóm** | `MedicalCategoryFormDialog` (\[`_medical_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py)) | `english_category_edit` (`objectName="english_category_edit"`), `vietnamese_category_edit` (`objectName="vietnamese_category_edit"`), `error_label` (`objectName="error_label"`), `ok_button`, `cancel_button`, `created_category` | Kiểm tra hợp lệ: bắt buộc có `Canonical English Category *` (ASCII Tiếng Anh, không dấu, không trùng lặp) và tùy chọn `Localized Display Name`. Khi bấm `OK`, tạo `TerminologyCategory` mới trong Registry. |
-| **Terminology Engine** | `MedicalTerminologyRegistry` (\[`_medical_terminology.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_medical_terminology.py)) | `add_custom_category(en_name, vi_name, preset_id)`, `validate_canonical_english_category(...)` | Kiểm tra hợp lệ, sinh `category_id` từ `en_name`, thêm nhóm vào preset hiện hành và lưu cấu hình bền vững vào `custom_terminologies.added_categories`. |
+| **Bảng Label List (Dock phải) & Popup Chọn Nhãn** | `UniqueLabelQListWidget` (\[`_unique_label_qlist_widget.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_unique_label_qlist_widget.py)), `LabelDialog` (\[`_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_dialog.py)) | `category_combo`, `add_label_button` (`+`), `edit_label_button` (`✎`, `objectName="edit_label_button"`), `delete_label_button` (`-`, `objectName="delete_label_button"`) | Cho phép Thêm (`+`), Sửa (`✎` hoặc menu chuột phải `Edit Medical Label…`), Xóa (`-` hoặc menu chuột phải `Delete Medical Label`) bất kỳ nhãn nào (kể cả 21 nhãn preset). Chuột phải trên `category_combo` cũng cho phép Thêm/Sửa/Xóa nhóm. |
+| **Form Thêm / Sửa Nhãn** | `MedicalLabelFormDialog` (\[`_medical_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py)) | `category_combo` (`objectName="category_combo"`), `add_category_button` (`+`), `edit_category_button` (`✎`, `objectName="edit_category_button"`), `delete_category_button` (`-`, `objectName="delete_category_button"`), `editing_item` | Hỗ trợ cả 2 chế độ: **Add Medical Label** và **Edit Medical Label**. Dòng `Anatomical Category:` có đủ 3 nút `+` (Thêm nhóm), `✎` (Sửa nhóm đang chọn), `-` (Xóa nhóm đang chọn). |
+| **Hộp thoại Thêm / Sửa Nhóm** | `MedicalCategoryFormDialog` (\[`_medical_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py)) | `english_category_edit` (`objectName="english_category_edit"`), `vietnamese_category_edit` (`objectName="vietnamese_category_edit"`), `error_label` (`objectName="error_label"`), `ok_button`, `cancel_button`, `editing_category`, `created_category` | Hỗ trợ cả 2 chế độ: **Add Anatomical Category** và **Edit Anatomical Category**. Khi ở chế độ Edit, nạp sẵn `en_name` và `vi_name` hiện tại của nhóm để bác sĩ chỉnh sửa. |
+| **Terminology Engine** | `MedicalTerminologyRegistry` (\[`_medical_terminology.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_medical_terminology.py)) | `add_custom_category`, `update_category`, `delete_category`, `add_custom_label`, `update_label`, `delete_label` | Thực thi CRUD toàn diện cho cả dữ liệu tự thêm lẫn dữ liệu Preset mặc định (`chest_xray`), lưu và khôi phục bền vững trong `custom_terminologies` (`~/.labelmerc`). |
 
 ### 3.2. Cấu Trúc Lưu Trữ Cấu Hình `~/.labelmerc` (`custom_terminologies`)
 
@@ -125,3 +126,48 @@ ______________________________________________________________________
   - Khi gõ `"D"` vào `dialog.edit` đang focus: `InlineCompletion` **không** tự ý biến chữ trong `dialog.edit` thành `"Dày màng phổi"` làm ẩn mất `"Đám mờ phổi"`, `"Đông đặc phổi"`, `"Di lệch khí quản"`; tất cả các nhãn có chứa `"d"` / `"đ"` vẫn hiển thị đầy đủ để người dùng gõ tiếp dấu Tiếng Việt.
   - Khi đang gõ dở ở trạng thái gạch chân IME (`QInputMethodEvent` với `preeditString="Đám"`): `dialog.visible_labels()` lọc tức thời ra `["Lung opacity"]` (*Đám mờ phổi*) và nút `OK` được bật.
   - Trên các ô `vietnamese_label_edit`, `short_vietnamese_edit`, `vietnamese_category_edit`: Nhận đầy đủ chuỗi Tiếng Việt có dấu và tự động chuẩn hóa về Unicode `NFC`.
+
+### `TC-17`: Chỉnh sửa Nhãn Y Khoa (`Edit Medical Label`) — Kể cả Nhãn Preset & Đồng bộ Hình vẽ (`Shape`) trên Ảnh Hiện tại
+
+- **Luồng thực thi:**
+  1. Khởi tạo `MainWindow`, vẽ 1 hình chữ nhật mang nhãn `"Lung opacity"` (*Đám mờ phổi*) trên Canvas.
+  2. Chọn dòng `"Lung opacity"` trên `UniqueLabelQListWidget` (hoặc trên `LabelDialog`), bấm nút `edit_label_button` (`✎`) để mở `MedicalLabelFormDialog` ở chế độ **Edit Medical Label**.
+  3. Kiểm tra form nạp sẵn 6 trường của `"Lung opacity"`. Sửa `english_label_edit = "Pulmonary infiltrate"`, `vietnamese_label_edit = "Thâm nhiễm phổi"`, `short_english_edit = "Infiltrate"`, `short_vietnamese_edit = "Thâm nhiễm"`, màu `(255, 100, 50)`, bấm `OK`.
+- **Xác minh Hộp xám (Grey-box State):**
+  - Nhãn `"Lung opacity"` tại vị trí đầu tiên trong Registry được cập nhật thành `"Pulmonary infiltrate"` (*Thâm nhiễm phổi*).
+  - Hình vẽ đang có trên Canvas tự động cập nhật `canvas.shapes[0].label == "Pulmonary infiltrate"` và dòng trên `Shape List` hiển thị `"Thâm nhiễm phổi"` (khi UI ở Tiếng Việt).
+  - Sau khi đóng và mở lại `MainWindow` với cùng `~/.labelmerc`, nhãn đã sửa `"Pulmonary infiltrate"` vẫn giữ nguyên (nhãn cũ `"Lung opacity"` không tự xuất hiện lại).
+
+### `TC-18`: Xóa Nhãn Y Khoa (`Delete Medical Label`) có Hộp thoại Xác nhận (`Yes / No Confirmation`) — Kể cả Nhãn Preset
+
+- **Luồng thực thi:**
+  1. Khởi tạo `MainWindow` với 21 nhãn mặc định.
+  2. Chọn nhãn `"Tracheal shift"` (nhãn preset) trên `UniqueLabelQListWidget`, bấm nút `delete_label_button` (`-`).
+  3. Trong hộp thoại xác nhận `QMessageBox` (*Delete Medical Label*) bật lên lần 1: bấm **`No`**.
+  4. Bấm lại nút `delete_label_button` (`-`), trong hộp thoại xác nhận `QMessageBox` bật lên lần 2: bấm **`Yes`**.
+- **Xác minh Hộp xám (Grey-box State):**
+  - Ở bước 3 (khi bấm **`No`**): Nhãn `"Tracheal shift"` **không bị xóa**, danh sách vẫn giữ nguyên `21` nhãn.
+  - Ở bước 4 (khi bấm **`Yes`**): Số lượng nhãn trong `registry.canonical_labels()` và `unique_list.settings_labels()` giảm từ `21` xuống `20`, `"Tracheal shift"` không còn trong danh sách.
+  - Sau khi đóng và mở lại `MainWindow` với cùng `~/.labelmerc`, `"Tracheal shift"` vẫn bị xóa (`len(reopened._docks.unique_label_list.settings_labels()) == 20`).
+
+### `TC-19`: Chỉnh sửa Nhóm Giải Phẫu (`Edit Anatomical Category`) — Kể cả Nhóm Preset & Cập nhật Đồng bộ các Nhãn thuộc Nhóm
+
+- **Luồng thực thi:**
+  1. Mở `MedicalLabelFormDialog`, chọn nhóm `"Pleura"` (*Màng phổi*), bấm nút `edit_category_button` (`✎`) để mở `MedicalCategoryFormDialog` ở chế độ **Edit Anatomical Category**.
+  2. Sửa `english_category_edit = "Pleural space"`, `vietnamese_category_edit = "Khoang màng phổi"`, bấm `OK`.
+- **Xác minh Hộp xám (Grey-box State):**
+  - Nhóm `"pleura"` trong Registry được cập nhật thành `category_id == "pleural_space"`, `en_name == "Pleural space"`, `vi_name == "Khoang màng phổi"`.
+  - Cả 5 nhãn thuộc nhóm màng phổi (*Pleural effusion*, *Pleural thickening*...) đều tự động cập nhật `category_id == "pleural_space"`, `category_en == "Pleural space"`, `category_vi == "Khoang màng phổi"`.
+  - Các dropdown lọc nhóm trên `UniqueLabelQListWidget` và `LabelDialog` hiển thị `"Pleural space"` (EN) / `"Khoang màng phổi"` (VI) và lọc đúng 5 nhãn đó.
+  - Khởi động lại `MainWindow` vẫn bảo toàn tên nhóm mới.
+
+### `TC-20`: Xóa Nhóm Giải Phẫu (`Delete Anatomical Category`) có Hộp thoại Xác nhận (`Yes / No Confirmation`) — Kể cả Nhóm Preset
+
+- **Luồng thực thi:**
+  1. Mở `MedicalLabelFormDialog`, chọn nhóm `"Heart / Diaphragm / Trachea"` (gồm 2 nhãn *Cardiomegaly* và *Tracheal shift*), bấm nút `delete_category_button` (`-`).
+  2. Trong hộp thoại xác nhận `QMessageBox` (*Delete Anatomical Category*, hiển thị rõ số lượng 2 nhãn bên trong) bật lên lần 1: bấm **`No`**.
+  3. Bấm lại nút `delete_category_button` (`-`), trong hộp thoại xác nhận `QMessageBox` bật lên lần 2: bấm **`Yes`**.
+- **Xác minh Hộp xám (Grey-box State):**
+  - Ở bước 2 (khi bấm **`No`**): Nhóm `"Heart / Diaphragm / Trachea"` và 2 nhãn bên trong **không bị xóa** (`4` nhóm, `21` nhãn).
+  - Ở bước 3 (khi bấm **`Yes`**): Số lượng nhóm trong `registry.categories()` giảm từ `4` xuống `3`, nhóm `"heart_diaphragm_trachea"` và 2 nhãn thuộc nhóm đó bị xóa khỏi `preset.categories` và `preset.items` (còn `19` nhãn).
+  - Sau khi đóng và mở lại `MainWindow` với cùng `~/.labelmerc`, hệ thống vẫn giữ đúng `3` nhóm và `19` nhãn.

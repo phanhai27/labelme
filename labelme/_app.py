@@ -1650,6 +1650,8 @@ class MainWindow(QtWidgets.QMainWindow):
             on_clear_unused=self._clear_unused_unique_labels,
             terminology_registry=self._terminology_registry,
             on_add_label_requested=self._open_add_medical_label_dialog,
+            on_edit_label_requested=self._open_edit_medical_label_dialog,
+            on_delete_label_requested=self._delete_medical_label,
         )
         unique_label_list.setToolTip(
             self.tr(
@@ -4467,6 +4469,8 @@ class MainWindow(QtWidgets.QMainWindow):
             label_history=label_history,
             terminology_registry=self._terminology_registry,
             on_add_label_requested=self._open_add_medical_label_dialog,
+            on_edit_label_requested=self._open_edit_medical_label_dialog,
+            on_delete_label_requested=self._delete_medical_label,
         )
 
     def _persist_medical_terminology_config(self) -> None:
@@ -4509,17 +4513,110 @@ class MainWindow(QtWidgets.QMainWindow):
         self._persist_medical_terminology_config()
         self._sync_medical_terminology_widgets()
 
+    def _on_medical_category_updated(
+        self,
+        _old_cat_id: str,
+        _updated_cat: _medical_terminology.TerminologyCategory,
+        /,
+    ) -> None:
+        self._persist_medical_terminology_config()
+        self._sync_medical_terminology_widgets()
+
+    def _on_medical_category_deleted(
+        self, _removed_cat: _medical_terminology.TerminologyCategory, /
+    ) -> None:
+        active_shape_labels = {
+            s.label for s in self._canvas_widgets.canvas.shapes if s.label
+        }
+        valid_canonicals = set(self._terminology_registry.canonical_labels())
+        for hist_lbl in list(self._label_dialog.label_history):
+            if hist_lbl not in valid_canonicals and hist_lbl not in active_shape_labels:
+                self._label_dialog.remove_label(label=hist_lbl)
+        self._persist_medical_terminology_config()
+        self._sync_medical_terminology_widgets()
+
+    def _on_medical_label_updated(
+        self,
+        old_canonical: str,
+        new_item: _medical_terminology.TerminologyItem,
+        /,
+    ) -> None:
+        if old_canonical != new_item.canonical_label:
+            if old_canonical in self._label_dialog._label_history:
+                idx = self._label_dialog._label_history.index(old_canonical)
+                self._label_dialog._label_history[idx] = new_item.canonical_label
+            if self._label_dialog.last_label == old_canonical:
+                self._label_dialog.remember_label(label=new_item.canonical_label)
+            existing_row = self._docks.unique_label_list.find_label_item(
+                label=old_canonical
+            )
+            if existing_row is not None:
+                existing_row.setData(Qt.ItemDataRole.UserRole, new_item.canonical_label)
+            for shape in self._canvas_widgets.canvas.shapes:
+                if shape.label == old_canonical:
+                    shape.label = new_item.canonical_label
+
+        self._persist_medical_terminology_config()
+        self._sync_medical_terminology_widgets()
+        self._docks.label_list.refresh_locale_display()
+        self._refresh_shape_colors()
+        if self._label_dialog.isVisible():
+            self._label_dialog.edit.setText(
+                self._terminology_registry.get_display_label(
+                    canonical_label=new_item.canonical_label,
+                    category_filter_active=self._label_dialog.is_category_filter_active(),
+                )
+            )
+            self._label_dialog._selected_canonical_label = new_item.canonical_label
+
     def _open_add_medical_label_dialog(
         self,
     ) -> _widgets.MedicalLabelFormDialog:
         dialog = _widgets.MedicalLabelFormDialog(
             registry=self._terminology_registry,
             on_label_added=self._on_medical_label_added,
+            on_label_updated=self._on_medical_label_updated,
             on_category_added=self._on_medical_category_added,
+            on_category_updated=self._on_medical_category_updated,
+            on_category_deleted=self._on_medical_category_deleted,
             parent=self,
         )
         dialog.exec()
         return dialog
+
+    def _open_edit_medical_label_dialog(
+        self, canonical_label: str, /
+    ) -> _widgets.MedicalLabelFormDialog | None:
+        term_item = self._terminology_registry.get_item(canonical_label=canonical_label)
+        if term_item is None:
+            return None
+        dialog = _widgets.MedicalLabelFormDialog(
+            registry=self._terminology_registry,
+            editing_item=term_item,
+            on_label_added=self._on_medical_label_added,
+            on_label_updated=self._on_medical_label_updated,
+            on_category_added=self._on_medical_category_added,
+            on_category_updated=self._on_medical_category_updated,
+            on_category_deleted=self._on_medical_category_deleted,
+            parent=self,
+        )
+        dialog.exec()
+        return dialog
+
+    def _delete_medical_label(self, canonical_label: str, /) -> bool:
+        deleted = self._docks.unique_label_list.delete_medical_label(
+            canonical_label=canonical_label
+        )
+        if not deleted:
+            return False
+        active_shape_labels = {
+            s.label for s in self._canvas_widgets.canvas.shapes if s.label
+        }
+        if canonical_label not in active_shape_labels:
+            self._label_dialog.remove_label(label=canonical_label)
+        self._persist_medical_terminology_config()
+        self._sync_medical_terminology_widgets()
+        return True
 
     @override
     def changeEvent(self, a0: QtCore.QEvent, /) -> None:

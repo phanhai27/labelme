@@ -115,3 +115,72 @@ ______________________________________________________________________
     - Trong `LabelDialog.eventFilter`, lắng nghe `QtCore.QEvent.Type.InputMethod` (`QtGui.QInputMethodEvent`) trên `self.edit` để khi bộ gõ Tiếng Việt đang ở trạng thái gạch chân ghép chữ (`preeditString()`), bộ lọc `_filter_medical_items_by_search` và trạng thái nút `OK` cập nhật tức thời theo chuỗi `text + preeditString()`.
 - **Tầng Chuẩn hóa Unicode (\[`labelme/_medical_terminology.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_medical_terminology.py))**:
   - Chuẩn hóa `unicodedata.normalize("NFC", ...)` cho tất cả chuỗi Tiếng Việt nhập từ các ô `vietnamese_label_edit`, `short_vietnamese_edit`, `vietnamese_category_edit` và từ khóa tìm kiếm `query` để tương thích tuyệt đối với cả bộ gõ xuất Unicode dựng sẵn (NFC) lẫn tổ hợp (NFD).
+
+______________________________________________________________________
+
+## 4. Thiết kế Full CRUD: Chỉnh sửa (`Edit`) & Xóa (`Delete`) Nhãn và Nhóm Giải Phẫu (Bao gồm cả Dữ liệu Preset)
+
+> [!IMPORTANT]
+> **Nguyên tắc Nghiệp vụ:**
+> Bộ 4 nhóm và 21 nhãn X-quang ngực ban đầu chỉ là dữ liệu **Preset khởi tạo sẵn**. Bác sĩ có toàn quyền **Thêm (`+`), Sửa (`✎`), Xóa (`-`)** bất kỳ Nhãn y khoa nào và bất kỳ Nhóm giải phẫu nào (kể cả dữ liệu mặc định trong Preset) và mọi thay đổi đều được lưu bền vững vào `~/.labelmerc`.
+
+### 4.1. Định vị Kiến trúc 4 Tầng cho Luồng Edit & Delete
+
+#### Tầng 1 — Giao diện (`UI / Widgets` — \[`_medical_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py), \[`_unique_label_qlist_widget.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_unique_label_qlist_widget.py), \[`_label_dialog.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_dialog.py))
+
+1. **Chỉnh sửa & Xóa Nhóm Giải Phẫu (`Anatomical Category`)**:
+   - Trên dòng `Anatomical Category:` của \[`MedicalLabelFormDialog`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py), cụm nút bên cạnh `category_combo` gồm đủ 3 nút thao tác:
+     - **`+` (`add_category_button`, `objectName="add_category_button"`)**: Mở `MedicalCategoryFormDialog` ở chế độ **Add Anatomical Category** (*`Thêm nhóm giải phẫu`*).
+     - **`✎` (`edit_category_button`, `objectName="edit_category_button"`)**: Mở `MedicalCategoryFormDialog` ở chế độ **Edit Anatomical Category** (*`Sửa nhóm giải phẫu`*) với tham số `editing_category: TerminologyCategory`, nạp sẵn `en_name` và `vi_name` của nhóm đang chọn.
+     - **`-` (`delete_category_button`, `objectName="delete_category_button"`)**: Khi bấm vào, **bắt buộc hiển thị hộp thoại xác nhận (`QMessageBox.question` với 2 nút `Yes | No`, mặc định focus vào `No`)**:
+       - Tiêu đề: `Delete Anatomical Category` (*`Xóa nhóm giải phẫu`*).
+       - Nội dung cảnh báo rõ tên nhóm và số lượng nhãn bên trong: `Are you sure you want to delete category '{category}' and its {count} label(s)?` (*`Bạn có chắc chắn muốn xóa nhóm '{category}' cùng {count} nhãn bên trong không?`*).
+       - Chỉ khi bác sĩ bấm **`Yes`** mới thực hiện xóa; nếu bấm **`No`** hoặc đóng hộp thoại thì hủy thao tác, bảo toàn 100% dữ liệu.
+   - Đồng thời hỗ trợ menu chuột phải (Context Menu) trên `CategoryFilterComboBox` (`category_combo` ở bảng bên phải và trong `LabelDialog`) để bác sĩ có thể bấm chuột phải vào thanh chọn nhóm và chọn nhanh: `Add Anatomical Category…`, `Edit Anatomical Category…`, `Delete Anatomical Category` (cũng qua bước confirm `Yes | No`).
+2. **Chỉnh sửa & Xóa Nhãn Y Khoa (`Medical Label`)**:
+   - Trên thanh công cụ của bảng **`Label List` bên phải (\[`UniqueLabelQListWidget`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_unique_label_qlist_widget.py))** và hộp thoại **\[`LabelDialog`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_label_dialog.py)**:
+     - Bên cạnh `category_combo` và nút **`+` (`add_label_button`)**, bổ sung:
+       - Nút **`✎` (`edit_label_button`, `objectName="edit_label_button"`)**: Mở `MedicalLabelFormDialog` ở chế độ **Edit Medical Label** (*`Sửa nhãn y khoa`*) cho nhãn đang được chọn.
+       - Nút **`-` (`delete_label_button`, `objectName="delete_label_button"`)**: Khi bấm vào (hoặc chọn xóa từ menu chuột phải), **bắt buộc hiển thị hộp thoại xác nhận (`QMessageBox.question` với 2 nút `Yes | No`, mặc định focus vào `No`)**:
+         - Tiêu đề: `Delete Medical Label` (*`Xóa nhãn y khoa`*).
+         - Nội dung: `Are you sure you want to delete label '{label}'?` (*`Bạn có chắc chắn muốn xóa nhãn '{label}' không?`*).
+         - Chỉ khi bác sĩ bấm **`Yes`** mới xóa nhãn khỏi bộ từ vựng; nếu bấm **`No`** thì giữ nguyên.
+     - **Lưu ý hiển thị trên Dock hẹp (`UniqueLabelQListWidget`)**: Để đảm bảo khi thu hẹp dock bên phải xuống `180px` toàn bộ các nút vẫn nằm gọn trong viewport mà không sinh thanh cuộn ngang (`test_narrow_dock_keeps_edit_and_add_buttons_inside_viewport`), các nút `+`, `✎`, `-` dùng kích thước nhỏ gọn (`FixedWidth` 22–24px, `spacing=2`) và `category_combo` có `minimumWidth` linh hoạt.
+   - Bổ sung **Menu chuột phải (Context Menu)** trên từng dòng nhãn của `UniqueLabelQListWidget` và `LabelDialog.label_list`:
+     - `Edit Medical Label…` (*`Sửa nhãn y khoa…`*)
+     - `Delete Medical Label` (*`Xóa nhãn y khoa`*)
+   - Nâng cấp \[`MedicalLabelFormDialog`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_widgets/\_medical_label_dialog.py) hỗ trợ tham số `editing_item: TerminologyItem | None = None`:
+     - Khi `editing_item` khác `None`, đổi tiêu đề cửa sổ thành `Edit Medical Label` (*`Sửa nhãn y khoa`*), điền sẵn 6 trường (`english_label_edit`, `vietnamese_label_edit`, `short_english_edit`, `short_vietnamese_edit`, `category_combo`, `color_button`).
+
+#### Tầng 2 — Kiểm tra Dữ liệu (`Validation Layer` — \[`_medical_terminology.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_medical_terminology.py))
+
+- Khi **Sửa Nhãn (`update_custom_label`)**:
+  - Cho phép giữ nguyên `canonical_label` của chính nhãn đang sửa mà không báo lỗi trùng lặp (`exclude_label=original_canonical_label`), nhưng nếu đổi sang tên Tiếng Anh khác thì vẫn kiểm tra chuẩn ASCII Tiếng Anh và chống trùng lặp với các nhãn còn lại.
+- Khi **Sửa Nhóm (`update_custom_category`)**:
+  - Cho phép giữ nguyên `en_name` của chính nhóm đang sửa (`exclude_category_id=original_category_id`), nhưng nếu đổi sang tên mới thì kiểm tra chuẩn ASCII Tiếng Anh và chống trùng lặp với các nhóm còn lại.
+
+#### Tầng 3 — Nghiệp vụ Từ vựng & Đồng bộ Hình vẽ (\[`_medical_terminology.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_medical_terminology.py) & \[`_app.py`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_app.py))
+
+- Bổ sung 4 phương thức CRUD trong `MedicalTerminologyRegistry`:
+  1. `update_label(original_canonical_label, canonical_label, vi_full, en_short, vi_short, category_name, color, preset_id) -> TerminologyItem`:
+     - Cập nhật trực tiếp tại đúng vị trí index của nhãn trong `preset.items` (giữ nguyên thứ tự danh sách).
+  2. `delete_label(canonical_label, preset_id) -> TerminologyItem`:
+     - Xóa nhãn khỏi `preset.items` (dù là nhãn mặc định hay nhãn tự thêm).
+  3. `update_category(original_category_id, en_name, vi_name, preset_id) -> TerminologyCategory`:
+     - Cập nhật `TerminologyCategory` tại đúng vị trí trong `preset.categories`, đồng thời cập nhật toàn bộ các `TerminologyItem` đang thuộc `original_category_id` sang `(new_cat.category_id, new_cat.en_name, new_cat.vi_name)`.
+  4. `delete_category(category_id, preset_id, delete_items=True) -> TerminologyCategory`:
+     - Xóa nhóm khỏi `preset.categories` (và xóa các nhãn thuộc nhóm đó khỏi `preset.items` khi `delete_items=True`).
+- Trên \[`MainWindow`\](file:///home/apollai/Documents/GitHub/medical/labelme/labelme/\_app.py):
+  - Khi bác sĩ **Sửa một Nhãn** (đổi `old_canonical` $\\rightarrow$ `new_item.canonical_label` hoặc đổi màu/tên hiển thị):
+    - Tự động duyệt các `Shape` đang có trên ảnh hiện tại: mọi `shape` có `shape.label == old_canonical` được cập nhật sang `new_item.canonical_label`, làm mới màu sắc và tên hiển thị trên `Canvas`, `Shape List` (`label_list`), `UniqueLabelQListWidget` và `LabelDialog`.
+  - Khi bác sĩ **Xóa một Nhãn** hoặc **Xóa một Nhóm**:
+    - Xóa khỏi danh sách `settings_labels` trên `UniqueLabelQListWidget` và `LabelDialog`, lưu cấu hình vào `~/.labelmerc`. Nếu ảnh hiện tại đang có hình vẽ dùng nhãn vừa xóa thì nhãn đó vẫn được bảo toàn dưới mục `Found in files` của ảnh đó để không làm hỏng dữ liệu hình vẽ.
+
+#### Tầng 4 — Lưu trữ Bền vững Mọi Thay đổi trên Preset (`to_custom_config` & `load_custom_config`)
+
+- Ngoài `added_categories` và `added_items`, cấu trúc `custom_terminologies` trong `~/.labelmerc` lưu thêm:
+  - `deleted_category_ids`: Danh sách `category_id` đã bị xóa theo từng `preset_id`.
+  - `updated_categories`: Danh sách các nhóm đã được chỉnh sửa theo từng `preset_id`.
+  - `deleted_labels`: Danh sách `canonical_label` đã bị xóa theo từng `preset_id`.
+  - `updated_items`: Danh sách các nhãn đã được chỉnh sửa theo từng `preset_id`.
+- Khi `load_custom_config()` chạy lúc khởi động ứng dụng: áp dụng đầy đủ các thao tác `deleted` $\\rightarrow$ `updated` $\\rightarrow$ `added` lên Preset `chest_xray`, đảm bảo bác sĩ xóa hay sửa bất kỳ nhãn/nhóm mặc định nào thì lần sau mở app vẫn giữ nguyên trạng thái đã chỉnh sửa 100%.

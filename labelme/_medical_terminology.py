@@ -690,6 +690,7 @@ def validate_canonical_english_label(
     *,
     canonical_label: str,
     existing_labels: list[str] | set[str] | tuple[str, ...] = (),
+    exclude_label: str | None = None,
 ) -> tuple[bool, str]:
     MIN_PRINTABLE_ASCII: Final[int] = 32
 
@@ -720,7 +721,12 @@ def validate_canonical_english_label(
                 "Canonical English label must contain at least one English letter.",
             ),
         )
-    existing_lower = {lbl.strip().lower() for lbl in existing_labels}
+    excluded = exclude_label.strip().lower() if exclude_label else None
+    existing_lower = {
+        lbl.strip().lower()
+        for lbl in existing_labels
+        if lbl.strip().lower() != excluded
+    }
     if cleaned.lower() in existing_lower:
         return (
             False,
@@ -737,6 +743,7 @@ def validate_canonical_english_category(
     en_name: str,
     existing_categories: list[TerminologyCategory]
     | tuple[TerminologyCategory, ...] = (),
+    exclude_category_id: str | None = None,
 ) -> tuple[bool, str]:
     MIN_PRINTABLE_ASCII: Final[int] = 32
 
@@ -769,7 +776,10 @@ def validate_canonical_english_category(
         )
     cleaned_lower = cleaned.lower()
     cleaned_slug = slugify_identifier(text=cleaned)
+    excluded_id = exclude_category_id.strip().lower() if exclude_category_id else None
     for cat in existing_categories:
+        if excluded_id is not None and cat.category_id.lower() == excluded_id:
+            continue
         if (
             cleaned_lower
             in (
@@ -1102,6 +1112,122 @@ class MedicalTerminologyRegistry:
             )
         return new_cat
 
+    def update_category(
+        self,
+        *,
+        original_category_id: str,
+        en_name: str,
+        vi_name: str = "",
+        preset_id: str | None = None,
+    ) -> TerminologyCategory:
+        preset = self.get_preset(preset_id=preset_id) or self.active_preset
+        target_key = normalize_nfc(text=original_category_id).lower()
+        cat_index = -1
+        old_cat: TerminologyCategory | None = None
+        for idx, cat in enumerate(preset.categories):
+            if target_key in (
+                cat.category_id.lower(),
+                cat.en_name.lower(),
+                cat.vi_name.lower(),
+            ):
+                cat_index = idx
+                old_cat = cat
+                break
+        if old_cat is None or cat_index < 0:
+            raise ValueError(f"Unknown category: {original_category_id!r}")
+
+        valid, error = validate_canonical_english_category(
+            en_name=en_name,
+            existing_categories=preset.categories,
+            exclude_category_id=old_cat.category_id,
+        )
+        if not valid:
+            raise ValueError(error)
+
+        cleaned_en = normalize_nfc(text=en_name)
+        cleaned_vi = normalize_nfc(text=vi_name) or cleaned_en
+        new_cat_id = (
+            old_cat.category_id
+            if cleaned_en.lower() == old_cat.en_name.lower()
+            else slugify_identifier(text=cleaned_en)
+        )
+        updated_cat = TerminologyCategory(
+            category_id=new_cat_id,
+            en_name=cleaned_en,
+            vi_name=cleaned_vi,
+        )
+        preset.categories[cat_index] = updated_cat
+
+        for idx, item in enumerate(preset.items):
+            if item.category_id == old_cat.category_id:
+                preset.items[idx] = dataclasses.replace(
+                    item,
+                    category_id=updated_cat.category_id,
+                    category_en=updated_cat.en_name,
+                    category_vi=updated_cat.vi_name,
+                )
+
+        if preset.preset_id in self._custom_added_categories:
+            self._custom_added_categories[preset.preset_id] = [
+                updated_cat if c.category_id == old_cat.category_id else c
+                for c in self._custom_added_categories[preset.preset_id]
+            ]
+        if preset.preset_id in self._custom_added_items:
+            self._custom_added_items[preset.preset_id] = [
+                dataclasses.replace(
+                    it,
+                    category_id=updated_cat.category_id,
+                    category_en=updated_cat.en_name,
+                    category_vi=updated_cat.vi_name,
+                )
+                if it.category_id == old_cat.category_id
+                else it
+                for it in self._custom_added_items[preset.preset_id]
+            ]
+        return updated_cat
+
+    def delete_category(
+        self,
+        *,
+        category_id: str,
+        preset_id: str | None = None,
+        delete_items: bool = True,
+    ) -> TerminologyCategory:
+        preset = self.get_preset(preset_id=preset_id) or self.active_preset
+        target_key = normalize_nfc(text=category_id).lower()
+        cat_index = -1
+        removed_cat: TerminologyCategory | None = None
+        for idx, cat in enumerate(preset.categories):
+            if target_key in (
+                cat.category_id.lower(),
+                cat.en_name.lower(),
+                cat.vi_name.lower(),
+            ):
+                cat_index = idx
+                removed_cat = cat
+                break
+        if removed_cat is None or cat_index < 0:
+            raise ValueError(f"Unknown category: {category_id!r}")
+
+        preset.categories.pop(cat_index)
+        if delete_items:
+            preset.items = [
+                it for it in preset.items if it.category_id != removed_cat.category_id
+            ]
+        if preset.preset_id in self._custom_added_categories:
+            self._custom_added_categories[preset.preset_id] = [
+                c
+                for c in self._custom_added_categories[preset.preset_id]
+                if c.category_id != removed_cat.category_id
+            ]
+        if delete_items and preset.preset_id in self._custom_added_items:
+            self._custom_added_items[preset.preset_id] = [
+                it
+                for it in self._custom_added_items[preset.preset_id]
+                if it.category_id != removed_cat.category_id
+            ]
+        return removed_cat
+
     def add_custom_label(
         self,
         *,
@@ -1202,6 +1328,144 @@ class MedicalTerminologyRegistry:
             self._custom_added_items.setdefault(preset.preset_id, []).append(new_item)
         return new_item
 
+    def update_label(
+        self,
+        *,
+        original_canonical_label: str,
+        canonical_label: str,
+        vi_full: str = "",
+        en_short: str = "",
+        vi_short: str = "",
+        category_name: str = "",
+        color: tuple[int, int, int] | None = None,
+        aliases: tuple[str, ...] = (),
+        preset_id: str | None = None,
+    ) -> TerminologyItem:
+        preset = self.get_preset(preset_id=preset_id) or self.active_preset
+        target_key = normalize_nfc(text=original_canonical_label).lower()
+        item_index = -1
+        old_item: TerminologyItem | None = None
+        for idx, it in enumerate(preset.items):
+            if it.canonical_label.lower() == target_key:
+                item_index = idx
+                old_item = it
+                break
+        if old_item is None or item_index < 0:
+            raise ValueError(f"Unknown medical label: {original_canonical_label!r}")
+
+        valid, error = validate_canonical_english_label(
+            canonical_label=canonical_label,
+            existing_labels=preset.canonical_labels(),
+            exclude_label=old_item.canonical_label,
+        )
+        if not valid:
+            raise ValueError(error)
+
+        cleaned_en = normalize_nfc(text=canonical_label)
+        cleaned_vi = normalize_nfc(text=vi_full) or cleaned_en
+        cleaned_en_short = normalize_nfc(text=en_short) or cleaned_en
+        cleaned_vi_short = normalize_nfc(text=vi_short) or cleaned_vi
+
+        cat_input = normalize_nfc(text=category_name)
+        matched_cat: TerminologyCategory | None = None
+        if cat_input:
+            for cat in preset.categories:
+                if (
+                    cat.category_id.lower() == cat_input.lower()
+                    or cat.en_name.lower() == cat_input.lower()
+                    or cat.vi_name.lower() == cat_input.lower()
+                    or strip_accents(text=cat.vi_name.lower())
+                    == strip_accents(text=cat_input.lower())
+                ):
+                    matched_cat = cat
+                    break
+        if matched_cat is None:
+            if cat_input:
+                matched_cat = TerminologyCategory(
+                    category_id=slugify_identifier(text=cat_input),
+                    en_name=cat_input,
+                    vi_name=cat_input,
+                )
+                preset.categories.append(matched_cat)
+            else:
+                for cat in preset.categories:
+                    if cat.category_id == old_item.category_id:
+                        matched_cat = cat
+                        break
+                if matched_cat is None and preset.categories:
+                    matched_cat = preset.categories[0]
+                elif matched_cat is None:
+                    matched_cat = TerminologyCategory(
+                        category_id=old_item.category_id,
+                        en_name=old_item.category_en,
+                        vi_name=old_item.category_vi,
+                    )
+
+        chosen_color = color if color is not None else old_item.color
+        computed_aliases = list(
+            dict.fromkeys(
+                a.lower()
+                for a in (
+                    cleaned_en,
+                    cleaned_en_short,
+                    cleaned_vi,
+                    cleaned_vi_short,
+                    strip_accents(text=cleaned_vi),
+                    strip_accents(text=cleaned_vi_short),
+                    *aliases,
+                )
+                if a.strip()
+            )
+        )
+        updated_item = TerminologyItem(
+            canonical_label=cleaned_en,
+            en_full=cleaned_en,
+            en_short=cleaned_en_short,
+            vi_full=cleaned_vi,
+            vi_short=cleaned_vi_short,
+            category_id=matched_cat.category_id,
+            category_en=matched_cat.en_name,
+            category_vi=matched_cat.vi_name,
+            color=chosen_color,
+            aliases=tuple(computed_aliases),
+        )
+        preset.items[item_index] = updated_item
+        if preset.preset_id in self._custom_added_items:
+            self._custom_added_items[preset.preset_id] = [
+                updated_item
+                if it.canonical_label.lower() == old_item.canonical_label.lower()
+                else it
+                for it in self._custom_added_items[preset.preset_id]
+            ]
+        return updated_item
+
+    def delete_label(
+        self,
+        *,
+        canonical_label: str,
+        preset_id: str | None = None,
+    ) -> TerminologyItem:
+        preset = self.get_preset(preset_id=preset_id) or self.active_preset
+        target_key = normalize_nfc(text=canonical_label).lower()
+        item_index = -1
+        removed_item: TerminologyItem | None = None
+        for idx, it in enumerate(preset.items):
+            if it.canonical_label.lower() == target_key:
+                item_index = idx
+                removed_item = it
+                break
+        if removed_item is None or item_index < 0:
+            raise ValueError(f"Unknown medical label: {canonical_label!r}")
+
+        preset.items.pop(item_index)
+        if preset.preset_id in self._custom_added_items:
+            self._custom_added_items[preset.preset_id] = [
+                it
+                for it in self._custom_added_items[preset.preset_id]
+                if it.canonical_label.lower() != removed_item.canonical_label.lower()
+            ]
+        return removed_item
+
     def add_custom_preset(
         self,
         *,
@@ -1251,10 +1515,18 @@ class MedicalTerminologyRegistry:
         custom_presets_list: list[dict[str, object]] = [
             p.to_dict() for p in self._custom_presets.values()
         ]
+        modified_presets_dict: dict[str, dict[str, object]] = {}
+        chest_preset = self._presets.get(CHEST_XRAY_PRESET.preset_id)
+        if chest_preset is not None and (
+            chest_preset.categories != list(CHEST_XRAY_PRESET.categories)
+            or chest_preset.items != list(CHEST_XRAY_PRESET.items)
+        ):
+            modified_presets_dict[CHEST_XRAY_PRESET.preset_id] = chest_preset.to_dict()
         if (
             not added_categories_dict
             and not added_items_dict
             and not custom_presets_list
+            and not modified_presets_dict
         ):
             return None
         result: dict[str, object] = {}
@@ -1264,6 +1536,8 @@ class MedicalTerminologyRegistry:
             result["added_items"] = copy.deepcopy(added_items_dict)
         if custom_presets_list:
             result["presets"] = copy.deepcopy(custom_presets_list)
+        if modified_presets_dict:
+            result["modified_presets"] = copy.deepcopy(modified_presets_dict)
         return result
 
     def load_custom_config(self, *, data: object) -> None:
@@ -1281,6 +1555,16 @@ class MedicalTerminologyRegistry:
                 if preset.preset_id and preset.preset_id != "chest_xray":
                     self._presets[preset.preset_id] = preset
                     self._custom_presets[preset.preset_id] = preset
+        raw_modified = data_dict.get("modified_presets")
+        if isinstance(raw_modified, dict):
+            modified_dict = cast(dict[object, object], raw_modified)
+            for pid, p_data in modified_dict.items():
+                if not isinstance(pid, str) or not isinstance(p_data, dict):
+                    continue
+                if pid in self._presets:
+                    self._presets[pid] = TerminologyPreset.from_dict(
+                        data=cast(dict[str, object], p_data)
+                    )
         raw_added_cats = data_dict.get("added_categories")
         if isinstance(raw_added_cats, dict):
             added_cats_dict = cast(dict[object, object], raw_added_cats)

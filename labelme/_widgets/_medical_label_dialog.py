@@ -44,8 +44,8 @@ class CategoryFilterComboBox(QtWidgets.QComboBox):
         self.setSizeAdjustPolicy(
             QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
-        self.setMinimumContentsLength(6)
-        self.setMinimumWidth(60)
+        self.setMinimumContentsLength(4)
+        self.setMinimumWidth(40)
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
             QtWidgets.QSizePolicy.Policy.Fixed,
@@ -194,10 +194,12 @@ class PresetSelectorComboBox(QtWidgets.QComboBox):
 
 
 class MedicalCategoryFormDialog(QtWidgets.QDialog):
-    """Form UI for adding a new anatomical category with validation."""
+    """Form UI for adding or editing an anatomical category with validation."""
 
     _registry: MedicalTerminologyRegistry
     _on_category_added: Callable[[TerminologyCategory], None] | None
+    _on_category_updated: Callable[[str, TerminologyCategory], None] | None
+    editing_category: TerminologyCategory | None
 
     english_category_edit: QtWidgets.QLineEdit
     vietnamese_category_edit: QtWidgets.QLineEdit
@@ -210,17 +212,25 @@ class MedicalCategoryFormDialog(QtWidgets.QDialog):
         self,
         *,
         registry: MedicalTerminologyRegistry | None = None,
+        editing_category: TerminologyCategory | None = None,
         on_category_added: Callable[[TerminologyCategory], None] | None = None,
+        on_category_updated: Callable[[str, TerminologyCategory], None] | None = None,
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._registry = (
             registry if registry is not None else get_terminology_registry()
         )
+        self.editing_category = editing_category
         self._on_category_added = on_category_added
+        self._on_category_updated = on_category_updated
         self.created_category = None
 
-        title = self.tr("Add Anatomical Category")
+        title = (
+            self.tr("Edit Anatomical Category")
+            if editing_category is not None
+            else self.tr("Add Anatomical Category")
+        )
         self.setWindowTitle(title)
         self.setAccessibleName(title)
         self.setMinimumWidth(360)
@@ -239,6 +249,10 @@ class MedicalCategoryFormDialog(QtWidgets.QDialog):
         self.vietnamese_category_edit.textChanged.connect(
             lambda _t: _normalize_line_edit_nfc(edit=self.vietnamese_category_edit)
         )
+
+        if editing_category is not None:
+            self.english_category_edit.setText(editing_category.en_name)
+            self.vietnamese_category_edit.setText(editing_category.vi_name)
 
         self.error_label = QtWidgets.QLabel()
         self.error_label.setObjectName("error_label")
@@ -280,19 +294,30 @@ class MedicalCategoryFormDialog(QtWidgets.QDialog):
     @override
     def accept(self) -> None:
         try:
-            new_cat = self._registry.add_custom_category(
-                en_name=self.english_category_edit.text(),
-                vi_name=self.vietnamese_category_edit.text(),
-            )
+            if self.editing_category is None:
+                old_id = ""
+                result_cat = self._registry.add_custom_category(
+                    en_name=self.english_category_edit.text(),
+                    vi_name=self.vietnamese_category_edit.text(),
+                )
+            else:
+                old_id = self.editing_category.category_id
+                result_cat = self._registry.update_category(
+                    original_category_id=old_id,
+                    en_name=self.english_category_edit.text(),
+                    vi_name=self.vietnamese_category_edit.text(),
+                )
         except ValueError as err:
             self._show_error(message=str(err))
             return
 
         self.error_label.clear()
         self.error_label.hide()
-        self.created_category = new_cat
-        if self._on_category_added is not None:
-            self._on_category_added(new_cat)
+        self.created_category = result_cat
+        if self.editing_category is not None and self._on_category_updated is not None:
+            self._on_category_updated(old_id, result_cat)
+        elif self._on_category_added is not None:
+            self._on_category_added(result_cat)
         super().accept()
 
 
@@ -378,13 +403,17 @@ class _LabelFormCategoryComboBox(QtWidgets.QComboBox):
 
 
 class MedicalLabelFormDialog(QtWidgets.QDialog):
-    """Form UI for adding a new medical terminology label with validation."""
+    """Form UI for adding or editing a medical terminology label with validation."""
 
     _registry: MedicalTerminologyRegistry
     _on_label_added: Callable[[TerminologyItem], None] | None
+    _on_label_updated: Callable[[str, TerminologyItem], None] | None
     _on_category_added: Callable[[TerminologyCategory], None] | None
+    _on_category_updated: Callable[[str, TerminologyCategory], None] | None
+    _on_category_deleted: Callable[[TerminologyCategory], None] | None
     _selected_color: tuple[int, int, int]
     _last_valid_category_index: int
+    editing_item: TerminologyItem | None
 
     english_label_edit: QtWidgets.QLineEdit
     vietnamese_label_edit: QtWidgets.QLineEdit
@@ -392,6 +421,8 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
     short_vietnamese_edit: QtWidgets.QLineEdit
     category_combo: _LabelFormCategoryComboBox
     add_category_button: QtWidgets.QToolButton
+    edit_category_button: QtWidgets.QToolButton
+    delete_category_button: QtWidgets.QToolButton
     color_button: QtWidgets.QPushButton
     error_label: QtWidgets.QLabel
     ok_button: QtWidgets.QPushButton
@@ -402,22 +433,34 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         self,
         *,
         registry: MedicalTerminologyRegistry | None = None,
+        editing_item: TerminologyItem | None = None,
         on_label_added: Callable[[TerminologyItem], None] | None = None,
+        on_label_updated: Callable[[str, TerminologyItem], None] | None = None,
         on_category_added: Callable[[TerminologyCategory], None] | None = None,
+        on_category_updated: Callable[[str, TerminologyCategory], None] | None = None,
+        on_category_deleted: Callable[[TerminologyCategory], None] | None = None,
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._registry = (
             registry if registry is not None else get_terminology_registry()
         )
+        self.editing_item = editing_item
         self._on_label_added = on_label_added
+        self._on_label_updated = on_label_updated
         self._on_category_added = on_category_added
+        self._on_category_updated = on_category_updated
+        self._on_category_deleted = on_category_deleted
         self.created_item = None
 
-        title = self.tr("Add Medical Label")
+        title = (
+            self.tr("Edit Medical Label")
+            if editing_item is not None
+            else self.tr("Add Medical Label")
+        )
         self.setWindowTitle(title)
         self.setAccessibleName(title)
-        self.setMinimumWidth(380)
+        self.setMinimumWidth(400)
 
         self.english_label_edit = QtWidgets.QLineEdit()
         self.english_label_edit.setObjectName("english_label_edit")
@@ -461,17 +504,49 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         self.add_category_button.setToolTip(self.tr("Add Anatomical Category"))
         self.add_category_button.clicked.connect(self._handle_add_category_clicked)
 
+        self.edit_category_button = QtWidgets.QToolButton()
+        self.edit_category_button.setObjectName("edit_category_button")
+        self.edit_category_button.setText("✎")
+        self.edit_category_button.setToolTip(self.tr("Edit Anatomical Category"))
+        self.edit_category_button.clicked.connect(self._handle_edit_category_clicked)
+
+        self.delete_category_button = QtWidgets.QToolButton()
+        self.delete_category_button.setObjectName("delete_category_button")
+        self.delete_category_button.setText("-")
+        self.delete_category_button.setToolTip(self.tr("Delete Anatomical Category"))
+        self.delete_category_button.clicked.connect(
+            self._handle_delete_category_clicked
+        )
+
         category_row = QtWidgets.QHBoxLayout()
         category_row.setContentsMargins(0, 0, 0, 0)
         category_row.setSpacing(4)
         category_row.addWidget(self.category_combo, stretch=1)
         category_row.addWidget(self.add_category_button)
+        category_row.addWidget(self.edit_category_button)
+        category_row.addWidget(self.delete_category_button)
 
-        self._selected_color = self._registry.suggest_next_color()
+        self._selected_color = (
+            editing_item.color
+            if editing_item is not None
+            else self._registry.suggest_next_color()
+        )
         self.color_button = QtWidgets.QPushButton()
         self.color_button.setObjectName("color_button")
         self.color_button.clicked.connect(self._choose_color)
         self._update_color_button_style()
+
+        if editing_item is not None:
+            self.english_label_edit.setText(editing_item.canonical_label)
+            self.vietnamese_label_edit.setText(editing_item.vi_full)
+            self.short_english_edit.setText(editing_item.en_short)
+            self.short_vietnamese_edit.setText(editing_item.vi_short)
+            self.category_combo.refresh_categories(
+                select_category_id=editing_item.category_id
+            )
+            self._last_valid_category_index = max(0, self.category_combo.currentIndex())
+
+        self._refresh_category_action_buttons()
 
         self.error_label = QtWidgets.QLabel()
         self.error_label.setObjectName("error_label")
@@ -507,16 +582,44 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         main_layout.addWidget(self.error_label)
         main_layout.addWidget(button_box)
 
+    def _current_selected_category(self) -> TerminologyCategory | None:
+        cat_data = self.category_combo.currentData()
+        if (
+            not isinstance(cat_data, str)
+            or not cat_data
+            or cat_data == NEW_CATEGORY_SENTINEL
+        ):
+            return None
+        for cat in self._registry.categories():
+            if cat.category_id == cat_data:
+                return cat
+        return None
+
+    def _refresh_category_action_buttons(self) -> None:
+        has_cat = self._current_selected_category() is not None
+        if hasattr(self, "edit_category_button"):
+            self.edit_category_button.setEnabled(has_cat)
+        if hasattr(self, "delete_category_button"):
+            self.delete_category_button.setEnabled(has_cat)
+
     def _handle_category_combo_changed(self, index: int, /) -> None:
         if index < 0:
+            self._refresh_category_action_buttons()
             return
         if self.category_combo.itemData(index) == NEW_CATEGORY_SENTINEL:
             self.open_add_category_dialog()
         else:
             self._last_valid_category_index = index
+            self._refresh_category_action_buttons()
 
     def _handle_add_category_clicked(self) -> None:
         self.open_add_category_dialog()
+
+    def _handle_edit_category_clicked(self) -> None:
+        self.open_edit_category_dialog()
+
+    def _handle_delete_category_clicked(self) -> None:
+        self.delete_current_category()
 
     def open_add_category_dialog(self) -> MedicalCategoryFormDialog:
         dialog = MedicalCategoryFormDialog(
@@ -533,6 +636,7 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
                 select_category_id=new_cat.category_id
             )
             self._last_valid_category_index = max(0, self.category_combo.currentIndex())
+            self._refresh_category_action_buttons()
             if self._on_category_added is not None:
                 self._on_category_added(new_cat)
         else:
@@ -545,7 +649,74 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
                 restore_idx = 0
             with QtCore.QSignalBlocker(self.category_combo):
                 self.category_combo.setCurrentIndex(restore_idx)
+            self._refresh_category_action_buttons()
         return dialog
+
+    def open_edit_category_dialog(self) -> MedicalCategoryFormDialog | None:
+        current_cat = self._current_selected_category()
+        if current_cat is None:
+            return None
+        old_id = current_cat.category_id
+        dialog = MedicalCategoryFormDialog(
+            registry=self._registry,
+            editing_category=current_cat,
+            parent=self,
+        )
+        result = dialog.exec()
+        if (
+            result == int(QtWidgets.QDialog.DialogCode.Accepted)
+            and dialog.created_category is not None
+        ):
+            updated_cat = dialog.created_category
+            self.category_combo.refresh_categories(
+                select_category_id=updated_cat.category_id
+            )
+            self._last_valid_category_index = max(0, self.category_combo.currentIndex())
+            self._refresh_category_action_buttons()
+            if self._on_category_updated is not None:
+                self._on_category_updated(old_id, updated_cat)
+            elif self._on_category_added is not None:
+                self._on_category_added(updated_cat)
+        return dialog
+
+    def delete_current_category(self) -> bool:
+        current_cat = self._current_selected_category()
+        if current_cat is None:
+            return False
+        locale = self._registry.get_locale()
+        cat_display = current_cat.display_name(locale=locale)
+        count = len(self._registry.items(category_id=current_cat.category_id))
+        if count > 0:
+            question_text = self.tr(
+                "Are you sure you want to delete category '{category}' "
+                "and its {count} label(s)?"
+            ).format(category=cat_display, count=count)
+        else:
+            question_text = self.tr(
+                "Are you sure you want to delete category '{category}'?"
+            ).format(category=cat_display)
+
+        msg = QtWidgets.QMessageBox(self)
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Question)
+        msg.setWindowTitle(self.tr("Delete Anatomical Category"))
+        msg.setText(question_text)
+        msg.setStandardButtons(
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No
+        )
+        msg.setDefaultButton(QtWidgets.QMessageBox.StandardButton.No)
+        if msg.exec() != int(QtWidgets.QMessageBox.StandardButton.Yes):
+            return False
+
+        removed = self._registry.delete_category(category_id=current_cat.category_id)
+        self.category_combo.refresh_categories()
+        self._last_valid_category_index = max(0, self.category_combo.currentIndex())
+        self._refresh_category_action_buttons()
+        if self._on_category_deleted is not None:
+            self._on_category_deleted(removed)
+        elif self._on_category_added is not None:
+            self._on_category_added(removed)
+        return True
 
     @override
     def changeEvent(self, event: QtCore.QEvent, /) -> None:
@@ -554,6 +725,7 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
             self, "category_combo"
         ):
             self.category_combo.refresh_categories()
+            self._refresh_category_action_buttons()
 
     @property
     def selected_color(self) -> tuple[int, int, int]:
@@ -595,23 +767,38 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
             else self.category_combo.currentText()
         )
         try:
-            new_item = self._registry.add_custom_label(
-                canonical_label=self.english_label_edit.text(),
-                vi_full=self.vietnamese_label_edit.text(),
-                en_short=self.short_english_edit.text(),
-                vi_short=self.short_vietnamese_edit.text(),
-                category_name=category_name,
-                color=self._selected_color,
-            )
+            if self.editing_item is None:
+                old_canonical = ""
+                result_item = self._registry.add_custom_label(
+                    canonical_label=self.english_label_edit.text(),
+                    vi_full=self.vietnamese_label_edit.text(),
+                    en_short=self.short_english_edit.text(),
+                    vi_short=self.short_vietnamese_edit.text(),
+                    category_name=category_name,
+                    color=self._selected_color,
+                )
+            else:
+                old_canonical = self.editing_item.canonical_label
+                result_item = self._registry.update_label(
+                    original_canonical_label=old_canonical,
+                    canonical_label=self.english_label_edit.text(),
+                    vi_full=self.vietnamese_label_edit.text(),
+                    en_short=self.short_english_edit.text(),
+                    vi_short=self.short_vietnamese_edit.text(),
+                    category_name=category_name,
+                    color=self._selected_color,
+                )
         except ValueError as err:
             self._show_error(message=str(err))
             return
 
         self.error_label.clear()
         self.error_label.hide()
-        self.created_item = new_item
-        if self._on_label_added is not None:
-            self._on_label_added(new_item)
+        self.created_item = result_item
+        if self.editing_item is not None and self._on_label_updated is not None:
+            self._on_label_updated(old_canonical, result_item)
+        elif self._on_label_added is not None:
+            self._on_label_added(result_item)
         super().accept()
 
 

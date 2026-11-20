@@ -374,6 +374,26 @@
         <source>Add New Medical Label…</source>
         <translation>Thêm nhãn y khoa mới…</translation>
     </message>
+    <message>
+        <source>Edit Selected Medical Label…</source>
+        <translation>Sửa nhãn y khoa đang chọn…</translation>
+    </message>
+    <message>
+        <source>Delete Selected Medical Label</source>
+        <translation>Xóa nhãn y khoa đang chọn</translation>
+    </message>
+    <message>
+        <source>Edit Medical Label…</source>
+        <translation>Sửa nhãn y khoa…</translation>
+    </message>
+    <message>
+        <source>Delete Medical Label</source>
+        <translation>Xóa nhãn y khoa</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete label &apos;{label}&apos;?</source>
+        <translation>Bạn có chắc chắn muốn xóa nhãn &apos;{label}&apos; không?</translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
@@ -1434,6 +1454,10 @@ Vị trí dự kiến: {path}</translation>
         <translation>Nhóm &apos;{category}&apos; đã tồn tại trong bộ nhãn hiện tại.</translation>
     </message>
     <message>
+        <source>Edit Anatomical Category</source>
+        <translation>Sửa nhóm giải phẫu</translation>
+    </message>
+    <message>
         <source>Add Anatomical Category</source>
         <translation>Thêm nhóm giải phẫu</translation>
     </message>
@@ -1477,6 +1501,10 @@ Vị trí dự kiến: {path}</translation>
         <translation>+ Thêm nhóm giải phẫu mới…</translation>
     </message>
     <message>
+        <source>Edit Medical Label</source>
+        <translation>Sửa nhãn y khoa</translation>
+    </message>
+    <message>
         <source>Add Medical Label</source>
         <translation>Thêm nhãn y khoa</translation>
     </message>
@@ -1501,6 +1529,14 @@ Vị trí dự kiến: {path}</translation>
         <translation>Thêm nhóm giải phẫu</translation>
     </message>
     <message>
+        <source>Edit Anatomical Category</source>
+        <translation>Sửa nhóm giải phẫu</translation>
+    </message>
+    <message>
+        <source>Delete Anatomical Category</source>
+        <translation>Xóa nhóm giải phẫu</translation>
+    </message>
+    <message>
         <source>Canonical English Label *:</source>
         <translation>Nhãn chuẩn Tiếng Anh *:</translation>
     </message>
@@ -1523,6 +1559,14 @@ Vị trí dự kiến: {path}</translation>
     <message>
         <source>Display Color:</source>
         <translation>Màu hiển thị:</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete category &apos;{category}&apos; and its {count} label(s)?</source>
+        <translation>Bạn có chắc chắn muốn xóa nhóm &apos;{category}&apos; cùng {count} nhãn bên trong không?</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete category &apos;{category}&apos;?</source>
+        <translation>Bạn có chắc chắn muốn xóa nhóm &apos;{category}&apos; không?</translation>
     </message>
 </context>
 <context>
@@ -1997,6 +2041,14 @@ Vị trí dự kiến: {path}</translation>
         <translation>Thêm nhãn y khoa mới…</translation>
     </message>
     <message>
+        <source>Edit Selected Medical Label…</source>
+        <translation>Sửa nhãn y khoa đang chọn…</translation>
+    </message>
+    <message>
+        <source>Delete Selected Medical Label</source>
+        <translation>Xóa nhãn y khoa đang chọn</translation>
+    </message>
+    <message>
         <source>Label set</source>
         <translation>Bộ nhãn</translation>
     </message>
@@ -2011,6 +2063,18 @@ Vị trí dự kiến: {path}</translation>
     <message>
         <source>Found in files</source>
         <translation>Tìm thấy trong tệp</translation>
+    </message>
+    <message>
+        <source>Delete Medical Label</source>
+        <translation>Xóa nhãn y khoa</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete label &apos;{label}&apos;?</source>
+        <translation>Bạn có chắc chắn muốn xóa nhãn &apos;{label}&apos; không?</translation>
+    </message>
+    <message>
+        <source>Edit Medical Label…</source>
+        <translation>Sửa nhãn y khoa…</translation>
     </message>
 </context>
 <context>

@@ -930,3 +930,259 @@ def test_tc_16_vietnamese_ime_preedit_and_inline_completion_do_not_clobber_typin
 
     qapp.removeTranslator(vi_translator)
     dialog.close()
+
+
+def test_tc_17_edit_preset_medical_label_syncs_canvas_shape_and_persists(
+    *,
+    qtbot: QtBot,
+    qapp: QtWidgets.QApplication,
+    vi_translator: QtCore.QTranslator,
+    isolated_home: Path,
+) -> None:
+    config_file = isolated_home / ".labelmerc"
+    config_file.write_text("auto_save: false\n", encoding="utf-8")
+    win = MainWindow(config_file=config_file)
+    qtbot.addWidget(win)
+
+    shape = Shape(
+        label="Lung opacity",
+        shape_type="rectangle",
+        points=np.array([[10.0, 20.0], [100.0, 120.0]], dtype=np.float64),
+    )
+    win._load_shapes(shapes=[shape], replace=True)
+
+    unique_list = win._docks.unique_label_list
+    opacity_item = unique_list.find_label_item(label="Lung opacity")
+    assert opacity_item is not None
+    unique_list.setCurrentItem(opacity_item)
+
+    def edit_and_submit_label() -> None:
+        modal = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(modal, MedicalLabelFormDialog)
+        assert modal.editing_item is not None
+        assert modal.english_label_edit.text() == "Lung opacity"
+        assert modal.vietnamese_label_edit.text() == "Đám mờ phổi"
+        modal.english_label_edit.setText("Pulmonary infiltrate")
+        modal.vietnamese_label_edit.setText("Thâm nhiễm phổi")
+        modal.short_english_edit.setText("Infiltrate")
+        modal.short_vietnamese_edit.setText("Thâm nhiễm")
+        modal.set_color(color=(255, 100, 50))
+        modal.ok_button.click()
+
+    QtCore.QTimer.singleShot(0, edit_and_submit_label)
+    qtbot.mouseClick(unique_list.edit_label_button, Qt.MouseButton.LeftButton)
+
+    assert win._terminology_registry.canonical_labels()[0] == "Pulmonary infiltrate"
+    assert unique_list.find_label_item(label="Lung opacity") is None
+    updated_row = unique_list.find_label_item(label="Pulmonary infiltrate")
+    assert updated_row is not None
+    assert updated_row.data(LABEL_COLOR_ROLE) == QtGui.QColor(255, 100, 50)
+
+    # Canvas shape and Shape List are automatically synced
+    assert win._canvas_widgets.canvas.shapes[0].label == "Pulmonary infiltrate"
+    qapp.installTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+    assert win._docks.label_list[0].text() == "Thâm nhiễm phổi"
+    qapp.removeTranslator(vi_translator)
+    win.close()
+
+    # Reopen MainWindow and verify preset edit persists
+    reopened = MainWindow(config_file=config_file)
+    qtbot.addWidget(reopened)
+    assert (
+        reopened._terminology_registry.canonical_labels()[0] == "Pulmonary infiltrate"
+    )
+    assert (
+        reopened._docks.unique_label_list.find_label_item(label="Lung opacity") is None
+    )
+    reopened.close()
+
+
+def test_tc_18_delete_preset_medical_label_requires_yes_no_confirmation(
+    *,
+    qtbot: QtBot,
+    isolated_home: Path,
+) -> None:
+    config_file = isolated_home / ".labelmerc"
+    config_file.touch()
+    win = MainWindow(config_file=config_file)
+    qtbot.addWidget(win)
+
+    unique_list = win._docks.unique_label_list
+    assert len(unique_list.settings_labels()) == 21
+    target_item = unique_list.find_label_item(label="Tracheal shift")
+    assert target_item is not None
+    unique_list.setCurrentItem(target_item)
+
+    # 1. Click '-' and press 'No' on the confirmation dialog -> label is NOT deleted
+    def click_no_on_confirm() -> None:
+        box = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(box, QtWidgets.QMessageBox)
+        no_btn = box.button(QtWidgets.QMessageBox.StandardButton.No)
+        assert no_btn is not None
+        no_btn.click()
+
+    QtCore.QTimer.singleShot(0, click_no_on_confirm)
+    qtbot.mouseClick(unique_list.delete_label_button, Qt.MouseButton.LeftButton)
+
+    assert len(win._terminology_registry.canonical_labels()) == 21
+    assert len(unique_list.settings_labels()) == 21
+    assert unique_list.find_label_item(label="Tracheal shift") is not None
+
+    # 2. Click '-' and press 'Yes' on the confirmation dialog -> label IS deleted
+    def click_yes_on_confirm() -> None:
+        box = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(box, QtWidgets.QMessageBox)
+        yes_btn = box.button(QtWidgets.QMessageBox.StandardButton.Yes)
+        assert yes_btn is not None
+        yes_btn.click()
+
+    QtCore.QTimer.singleShot(0, click_yes_on_confirm)
+    qtbot.mouseClick(unique_list.delete_label_button, Qt.MouseButton.LeftButton)
+
+    assert len(win._terminology_registry.canonical_labels()) == 20
+    assert len(unique_list.settings_labels()) == 20
+    assert unique_list.find_label_item(label="Tracheal shift") is None
+    win.close()
+
+    # Reopen MainWindow and verify deletion of preset label persists
+    reopened = MainWindow(config_file=config_file)
+    qtbot.addWidget(reopened)
+    assert len(reopened._docks.unique_label_list.settings_labels()) == 20
+    assert (
+        reopened._docks.unique_label_list.find_label_item(label="Tracheal shift")
+        is None
+    )
+    reopened.close()
+
+
+def test_tc_19_edit_preset_anatomical_category_updates_items_and_persists(
+    *,
+    qtbot: QtBot,
+    qapp: QtWidgets.QApplication,
+    vi_translator: QtCore.QTranslator,
+    isolated_home: Path,
+) -> None:
+    config_file = isolated_home / ".labelmerc"
+    config_file.touch()
+    win = MainWindow(config_file=config_file)
+    qtbot.addWidget(win)
+
+    form = MedicalLabelFormDialog(
+        registry=win._terminology_registry,
+        on_label_added=win._on_medical_label_added,
+        on_label_updated=win._on_medical_label_updated,
+        on_category_added=win._on_medical_category_added,
+        on_category_updated=win._on_medical_category_updated,
+        on_category_deleted=win._on_medical_category_deleted,
+        parent=win,
+    )
+    qtbot.addWidget(form)
+    form.show()
+
+    form.category_combo.setCurrentText("Pleura")
+    assert form.category_combo.currentData() == "pleura"
+
+    def edit_category_and_submit() -> None:
+        cat_modal = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(cat_modal, MedicalCategoryFormDialog)
+        assert cat_modal.editing_category is not None
+        assert cat_modal.english_category_edit.text() == "Pleura"
+        assert cat_modal.vietnamese_category_edit.text() == "Màng phổi"
+        cat_modal.english_category_edit.setText("Pleural space")
+        cat_modal.vietnamese_category_edit.setText("Khoang màng phổi")
+        cat_modal.ok_button.click()
+
+    QtCore.QTimer.singleShot(0, edit_category_and_submit)
+    qtbot.mouseClick(form.edit_category_button, Qt.MouseButton.LeftButton)
+
+    cats = win._terminology_registry.categories()
+    assert len(cats) == 4
+    assert cats[1].category_id == "pleural_space"
+    assert cats[1].en_name == "Pleural space"
+    assert cats[1].vi_name == "Khoang màng phổi"
+
+    pleural_items = win._terminology_registry.items(category_id="pleural_space")
+    assert len(pleural_items) == 5
+    assert all(it.category_en == "Pleural space" for it in pleural_items)
+    assert all(it.category_vi == "Khoang màng phổi" for it in pleural_items)
+
+    unique_list = win._docks.unique_label_list
+    qapp.installTranslator(vi_translator)
+    QtWidgets.QApplication.processEvents()
+    unique_list.category_combo.setCurrentText("Khoang màng phổi")
+    assert len(unique_list.visible_label_items()) == 5
+    qapp.removeTranslator(vi_translator)
+
+    form.close()
+    win.close()
+
+    reopened = MainWindow(config_file=config_file)
+    qtbot.addWidget(reopened)
+    assert reopened._terminology_registry.categories()[1].en_name == "Pleural space"
+    reopened.close()
+
+
+def test_tc_20_delete_preset_anatomical_category_requires_yes_no_confirmation(
+    *,
+    qtbot: QtBot,
+    isolated_home: Path,
+) -> None:
+    config_file = isolated_home / ".labelmerc"
+    config_file.touch()
+    win = MainWindow(config_file=config_file)
+    qtbot.addWidget(win)
+
+    form = MedicalLabelFormDialog(
+        registry=win._terminology_registry,
+        on_label_added=win._on_medical_label_added,
+        on_label_updated=win._on_medical_label_updated,
+        on_category_added=win._on_medical_category_added,
+        on_category_updated=win._on_medical_category_updated,
+        on_category_deleted=win._on_medical_category_deleted,
+        parent=win,
+    )
+    qtbot.addWidget(form)
+    form.show()
+
+    form.category_combo.setCurrentText("Heart / Diaphragm / Trachea")
+    assert form.category_combo.currentData() == "heart_diaphragm_trachea"
+
+    # 1. Click '-' and press 'No' -> category and its 2 labels are preserved
+    def click_no_on_cat_confirm() -> None:
+        box = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(box, QtWidgets.QMessageBox)
+        assert "2" in box.text()
+        no_btn = box.button(QtWidgets.QMessageBox.StandardButton.No)
+        assert no_btn is not None
+        no_btn.click()
+
+    QtCore.QTimer.singleShot(0, click_no_on_cat_confirm)
+    qtbot.mouseClick(form.delete_category_button, Qt.MouseButton.LeftButton)
+
+    assert len(win._terminology_registry.categories()) == 4
+    assert len(win._terminology_registry.canonical_labels()) == 21
+
+    # 2. Click '-' and press 'Yes' -> category and its 2 labels are deleted
+    def click_yes_on_cat_confirm() -> None:
+        box = QtWidgets.QApplication.activeModalWidget()
+        assert isinstance(box, QtWidgets.QMessageBox)
+        yes_btn = box.button(QtWidgets.QMessageBox.StandardButton.Yes)
+        assert yes_btn is not None
+        yes_btn.click()
+
+    QtCore.QTimer.singleShot(0, click_yes_on_cat_confirm)
+    qtbot.mouseClick(form.delete_category_button, Qt.MouseButton.LeftButton)
+
+    assert len(win._terminology_registry.categories()) == 3
+    assert len(win._terminology_registry.canonical_labels()) == 19
+    assert len(win._docks.unique_label_list.settings_labels()) == 19
+
+    form.close()
+    win.close()
+
+    reopened = MainWindow(config_file=config_file)
+    qtbot.addWidget(reopened)
+    assert len(reopened._terminology_registry.categories()) == 3
+    assert len(reopened._docks.unique_label_list.settings_labels()) == 19
+    reopened.close()
