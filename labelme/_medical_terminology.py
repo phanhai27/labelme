@@ -704,8 +704,8 @@ def validate_canonical_english_label(
             QtCore.QCoreApplication.translate(
                 "MedicalLabelFormDialog",
                 "Canonical English label must use standard English (ASCII) "
-                "characters without Vietnamese accents. Enter Vietnamese "
-                "names in the Vietnamese field below.",
+                "characters without accents. Enter localized "
+                "names in the Localized Display Name field below.",
             ),
         )
     if not any(ch.isalpha() for ch in cleaned):

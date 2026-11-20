@@ -1422,8 +1422,8 @@ Vị trí dự kiến: {path}</translation>
         <translation>Nhãn chuẩn Tiếng Anh là bắt buộc để lưu JSON huấn luyện AI.</translation>
     </message>
     <message>
-        <source>Canonical English label must use standard English (ASCII) characters without Vietnamese accents. Enter Vietnamese names in the Vietnamese field below.</source>
-        <translation>Nhãn chuẩn Tiếng Anh phải dùng ký tự Tiếng Anh không dấu (ASCII). Vui lòng nhập tên Tiếng Việt vào ô Tiếng Việt bên dưới.</translation>
+        <source>Canonical English label must use standard English (ASCII) characters without accents. Enter localized names in the Localized Display Name field below.</source>
+        <translation>Nhãn chuẩn Tiếng Anh phải dùng ký tự Tiếng Anh không dấu (ASCII). Vui lòng nhập tên bản địa vào ô Tên hiển thị bản địa bên dưới.</translation>
     </message>
     <message>
         <source>Canonical English label must contain at least one English letter.</source>
@@ -1442,7 +1442,7 @@ Vị trí dự kiến: {path}</translation>
         <translation>VD: Rib fracture (Nhãn chuẩn Tiếng Anh lưu JSON cho AI)</translation>
     </message>
     <message>
-        <source>e.g. Gãy xương sườn (Optional)</source>
+        <source>Display name in local language (Optional)</source>
         <translation>VD: Gãy xương sườn (Tùy chọn)</translation>
     </message>
     <message>
@@ -1450,24 +1450,24 @@ Vị trí dự kiến: {path}</translation>
         <translation>VD: Fracture (Tên rút gọn trong nhóm)</translation>
     </message>
     <message>
-        <source>e.g. Gãy (Short Vietnamese name in category)</source>
-        <translation>VD: Gãy (Tên Tiếng Việt rút gọn trong nhóm)</translation>
+        <source>Short localized name in category (Optional)</source>
+        <translation>VD: Gãy (Tên bản địa rút gọn trong nhóm)</translation>
     </message>
     <message>
         <source>Canonical English Label *:</source>
         <translation>Nhãn chuẩn Tiếng Anh *:</translation>
     </message>
     <message>
-        <source>Vietnamese Display Name:</source>
-        <translation>Tên hiển thị Tiếng Việt:</translation>
+        <source>Localized Display Name:</source>
+        <translation>Tên hiển thị bản địa:</translation>
     </message>
     <message>
         <source>Short English Name:</source>
         <translation>Tên Tiếng Anh rút gọn:</translation>
     </message>
     <message>
-        <source>Short Vietnamese Name:</source>
-        <translation>Tên Tiếng Việt rút gọn:</translation>
+        <source>Short Localized Name:</source>
+        <translation>Tên bản địa rút gọn:</translation>
     </message>
     <message>
         <source>Anatomical Category:</source>
@@ -1497,7 +1497,7 @@ Vị trí dự kiến: {path}</translation>
         <translation>VD: Brain CT</translation>
     </message>
     <message>
-        <source>e.g. CT Sọ não (Optional)</source>
+        <source>Localized preset name (Optional)</source>
         <translation>VD: CT Sọ não (Tùy chọn)</translation>
     </message>
     <message>
@@ -1505,8 +1505,8 @@ Vị trí dự kiến: {path}</translation>
         <translation>Tên bộ nhãn (Tiếng Anh) *:</translation>
     </message>
     <message>
-        <source>Vietnamese Name:</source>
-        <translation>Tên Tiếng Việt:</translation>
+        <source>Localized Name:</source>
+        <translation>Tên bản địa:</translation>
     </message>
 </context>
 <context>

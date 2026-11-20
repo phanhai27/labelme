@@ -226,7 +226,7 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         self.vietnamese_label_edit = QtWidgets.QLineEdit()
         self.vietnamese_label_edit.setObjectName("vietnamese_label_edit")
         self.vietnamese_label_edit.setPlaceholderText(
-            self.tr("e.g. Gãy xương sườn (Optional)")
+            self.tr("Display name in local language (Optional)")
         )
 
         self.short_english_edit = QtWidgets.QLineEdit()
@@ -238,7 +238,7 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
         self.short_vietnamese_edit = QtWidgets.QLineEdit()
         self.short_vietnamese_edit.setObjectName("short_vietnamese_edit")
         self.short_vietnamese_edit.setPlaceholderText(
-            self.tr("e.g. Gãy (Short Vietnamese name in category)")
+            self.tr("Short localized name in category (Optional)")
         )
 
         self.category_combo = QtWidgets.QComboBox()
@@ -264,11 +264,11 @@ class MedicalLabelFormDialog(QtWidgets.QDialog):
             self.tr("Canonical English Label *:"), self.english_label_edit
         )
         form_layout.addRow(
-            self.tr("Vietnamese Display Name:"), self.vietnamese_label_edit
+            self.tr("Localized Display Name:"), self.vietnamese_label_edit
         )
         form_layout.addRow(self.tr("Short English Name:"), self.short_english_edit)
         form_layout.addRow(
-            self.tr("Short Vietnamese Name:"), self.short_vietnamese_edit
+            self.tr("Short Localized Name:"), self.short_vietnamese_edit
         )
         form_layout.addRow(self.tr("Anatomical Category:"), self.category_combo)
         form_layout.addRow(self.tr("Display Color:"), self.color_button)
@@ -380,7 +380,7 @@ class MedicalPresetFormDialog(QtWidgets.QDialog):
         self.vietnamese_name_edit = QtWidgets.QLineEdit()
         self.vietnamese_name_edit.setObjectName("vietnamese_name_edit")
         self.vietnamese_name_edit.setPlaceholderText(
-            self.tr("e.g. CT Sọ não (Optional)")
+            self.tr("Localized preset name (Optional)")
         )
 
         self.error_label = QtWidgets.QLabel()
@@ -391,7 +391,7 @@ class MedicalPresetFormDialog(QtWidgets.QDialog):
 
         form_layout = QtWidgets.QFormLayout()
         form_layout.addRow(self.tr("Preset Name (English) *:"), self.preset_name_edit)
-        form_layout.addRow(self.tr("Vietnamese Name:"), self.vietnamese_name_edit)
+        form_layout.addRow(self.tr("Localized Name:"), self.vietnamese_name_edit)
 
         button_box = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.StandardButton.Ok

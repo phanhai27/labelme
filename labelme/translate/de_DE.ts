@@ -1422,8 +1422,8 @@ Erwarteter Speicherort: {path}</translation>
         <translation>Canonical English label is required for AI JSON storage.</translation>
     </message>
     <message>
-        <source>Canonical English label must use standard English (ASCII) characters without Vietnamese accents. Enter Vietnamese names in the Vietnamese field below.</source>
-        <translation>Canonical English label must use standard English (ASCII) characters without Vietnamese accents. Enter Vietnamese names in the Vietnamese field below.</translation>
+        <source>Canonical English label must use standard English (ASCII) characters without accents. Enter localized names in the Localized Display Name field below.</source>
+        <translation>Canonical English label must use standard English (ASCII) characters without accents. Enter localized names in the Localized Display Name field below.</translation>
     </message>
     <message>
         <source>Canonical English label must contain at least one English letter.</source>
@@ -1442,32 +1442,32 @@ Erwarteter Speicherort: {path}</translation>
         <translation>e.g. Rib fracture (Canonical English for AI JSON)</translation>
     </message>
     <message>
-        <source>e.g. Gãy xương sườn (Optional)</source>
-        <translation>e.g. Gãy xương sườn (Optional)</translation>
+        <source>Display name in local language (Optional)</source>
+        <translation>Display name in local language (Optional)</translation>
     </message>
     <message>
         <source>e.g. Fracture (Short name in category)</source>
         <translation>e.g. Fracture (Short name in category)</translation>
     </message>
     <message>
-        <source>e.g. Gãy (Short Vietnamese name in category)</source>
-        <translation>e.g. Gãy (Short Vietnamese name in category)</translation>
+        <source>Short localized name in category (Optional)</source>
+        <translation>Short localized name in category (Optional)</translation>
     </message>
     <message>
         <source>Canonical English Label *:</source>
         <translation>Canonical English Label *:</translation>
     </message>
     <message>
-        <source>Vietnamese Display Name:</source>
-        <translation>Vietnamese Display Name:</translation>
+        <source>Localized Display Name:</source>
+        <translation>Localized Display Name:</translation>
     </message>
     <message>
         <source>Short English Name:</source>
         <translation>Short English Name:</translation>
     </message>
     <message>
-        <source>Short Vietnamese Name:</source>
-        <translation>Short Vietnamese Name:</translation>
+        <source>Short Localized Name:</source>
+        <translation>Short Localized Name:</translation>
     </message>
     <message>
         <source>Anatomical Category:</source>
@@ -1497,16 +1497,16 @@ Erwarteter Speicherort: {path}</translation>
         <translation>e.g. Brain CT</translation>
     </message>
     <message>
-        <source>e.g. CT Sọ não (Optional)</source>
-        <translation>e.g. CT Sọ não (Optional)</translation>
+        <source>Localized preset name (Optional)</source>
+        <translation>Localized preset name (Optional)</translation>
     </message>
     <message>
         <source>Preset Name (English) *:</source>
         <translation>Preset Name (English) *:</translation>
     </message>
     <message>
-        <source>Vietnamese Name:</source>
-        <translation>Vietnamese Name:</translation>
+        <source>Localized Name:</source>
+        <translation>Localized Name:</translation>
     </message>
 </context>
 <context>
