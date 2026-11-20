@@ -10,6 +10,7 @@ jobs:
   # the GitHub release get their own jobs so each token is only in the job
   # that needs it.
   build:
+    if: github.repository == 'wkentaro/labelme'
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -29,6 +30,7 @@ jobs:
           path: dist/
           if-no-files-found: error
   publish:
+    if: github.repository == 'wkentaro/labelme'
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
@@ -43,6 +45,7 @@ jobs:
         with:
           skip-existing: true
   github-release:
+    if: github.repository == 'wkentaro/labelme'
     needs: publish
     runs-on: ubuntu-latest
     permissions:
